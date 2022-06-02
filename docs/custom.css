@@ -1,0 +1,65 @@
+video {
+	width: 100%;
+    object-fit: cover;
+}
+
+/* Indentation. */
+div.doc-contents:not(.first) {
+	padding-left: 25px;
+	border-left: 4px solid rgba(230, 230, 230);
+	margin-bottom: 80px;
+}
+
+/* Don't capitalize names. */
+h5.doc-heading {
+text-transform: none !important;
+}
+
+/* Don't use vertical space on hidden ToC entries. */
+h6.hidden-toc {
+margin: 0 !important;
+position: relative;
+top: -70px;
+}
+h6.hidden-toc::before {
+margin-top: 0 !important;
+padding-top: 0 !important;
+}
+
+/* Don't show permalink of hidden ToC entries. */
+h6.hidden-toc a.headerlink {
+display: none;
+}
+
+/* Avoid breaking parameters name, etc. in table cells. */
+td code {
+word-break: normal !important;
+}
+
+/* For pieces of Markdown rendered in table cells. */
+td p {
+margin-top: 0 !important;
+margin-bottom: 0 !important;
+}
+
+:root {
+	--md-default-fg-color: hsla(0, 0%, 0%, 0.87);
+	--md-default-fg-color--light: hsla(0, 0%, 0%, 0.54);
+	--md-default-fg-color--lighter: hsla(0, 0%, 0%, 0.26);
+	--md-default-fg-color--lightest: hsla(0, 0%, 0%, 0.07);
+	--md-default-bg-color: hsla(0, 0%, 100%, 1);
+	--md-default-bg-color--light: hsla(0, 0%, 100%, 0.7);
+	--md-default-bg-color--lighter: hsla(0, 0%, 100%, 0.3);
+	--md-default-bg-color--lightest: hsla(0, 0%, 100%, 0.12);
+	--md-primary-fg-color: rgb(49, 110, 146);
+	--md-primary-fg-color--light: hsla(230deg, 44%, 64%, 1);
+	--md-primary-fg-color--dark: hsla(232deg, 54%, 41%, 1);
+	--md-primary-bg-color: var(--md-default-bg-color);
+	--md-primary-bg-color--light: var(--md-default-bg-color--light);
+	--md-accent-fg-color: rgb(75, 168, 221);
+	--md-accent-fg-color--transparent: hsla(231deg, 99%, 66%, 0.1);
+	--md-accent-bg-color: var(--md-default-bg-color);
+	--md-accent-bg-color--light: var(--md-default-bg-color--light);
+	--md-code-bg-color: hsla(0, 0%, 96%, 1);
+	--md-code-fg-color: hsla(200, 18%, 26%, 1);
+}

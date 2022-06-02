@@ -1,0 +1,70 @@
+{
+    "discourseAct": [
+        "ack",
+        "hello",
+        "none",
+        "silence",
+        "thanks",
+        "bad"
+    ],
+    "informable": {
+        "Credit": [
+            "3"
+        ],
+        "Dates": [
+            "Tue. 2:00-3:30pm;",
+            "Wed. 9:45-11:15am;"
+        ],
+        "Field": [
+            "NLP, Speech,programming",
+            "NLP, speech"
+        ],
+        "Format": [
+            "project",
+            "seminar"
+        ],
+        "ID": [
+            "1",
+            "2"
+        ],
+        "Module": [
+            "Spoken Language Understanding"
+        ],
+        "Name": [
+            "Dialog Modelling",
+            "Spoken Dialog System"
+        ],
+        "Sms": [
+            "SS"
+        ]
+    },
+    "key": "Name",
+    "method": [
+        "none",
+        "byconstraints",
+        "byprimarykey",
+        "finished",
+        "byalternatives",
+        "restart"
+    ],
+    "requestable": [
+        "Name",
+        "ID",
+        "Module",
+        "Credit",
+        "Dates",
+        "Format",
+        "Field",
+        "Sms"
+    ],
+    "system_requestable": [
+        "Name",
+        "ID",
+        "Module",
+        "Credit",
+        "Dates",
+        "Format",
+        "Field",
+        "Sms"
+    ]
+}
