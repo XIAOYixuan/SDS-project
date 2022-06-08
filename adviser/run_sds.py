@@ -50,16 +50,23 @@ def load_nlg(backchannel: bool, domain = None, logger=None):
 def load_domain(backchannel: bool = False, logger = None):
     from utils.domain.jsonlookupdomain import JSONLookupDomain
     from services.nlu.nlu import TellerNLU, HandcraftedNLU
-    from services.nlg.nlg import HandcraftedNLG
-    from services.policy import HandcraftedPolicy
+    from services.nlg.nlg import TellerNLG, HandcraftedNLG
+    from services.policy import TellerPolicy, HandcraftedPolicy
+    from services.bst.bst import TellerBST
     domain = JSONLookupDomain('ImsLecturers', display_name="Lecturers")
-    # nlu = TellerNLU(domain=domain, logger=logger)
-    nlu = HandcraftedNLU(domain=domain, logger=logger)
-    bst = HandcraftedBST(domain=domain, logger=logger)
-    policy = HandcraftedPolicy(domain=domain, logger=logger)
-    nlg = load_nlg(backchannel=backchannel, domain=domain, logger=logger)
+    use_teller = True
+    # use_teller = False 
+    if use_teller:
+        nlu = TellerNLU(domain=domain, logger=logger)
+        bst = TellerBST(domain=domain, logger=logger)
+        policy = TellerPolicy(domain=domain, logger=logger)
+        nlg = TellerNLG(domain=domain, logger=logger)
+    else:
+        nlu = HandcraftedNLU(domain=domain, logger=logger)
+        bst = HandcraftedBST(domain=domain, logger=logger)
+        policy = HandcraftedPolicy(domain=domain, logger=logger)
+        nlg = load_nlg(backchannel=backchannel, domain=domain, logger=logger)
     return domain, [nlu, bst, policy, nlg]
-    # return domain, [nlu]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ADVISER 2.0 Dialog System')

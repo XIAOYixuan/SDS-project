@@ -28,7 +28,7 @@ from services.service import Service
 from utils.common import Language
 from utils.domain.domain import Domain
 from utils.logger import DiasysLogger
-from utils.sysact import SysAct
+from utils.sysact import SysAct, SysActionType
 from typing import Dict
 
 
@@ -156,3 +156,22 @@ class HandcraftedNLG(Service):
             return f"{name}'"
         else:
             return f"{name}s"
+
+
+class TellerNLG(HandcraftedNLG):
+
+    def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {},
+                logger = None, template_file_german= None,
+                language: Language = None):
+        Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
+
+        self.logger = logger
+
+
+    @PublishSubscribe(sub_topics=["sys_act"], pub_topics=["sys_utterance"])
+    def publish_system_utterance(self, sys_act: SysAct = None) -> dict(sys_utterance=str):
+        self.logger.info("receive sys act")
+        if sys_act.type == SysActionType.Bye:
+            return {'sys_utterance': 'bye'}
+
+        return {'sys_utterance': 'copy that'}

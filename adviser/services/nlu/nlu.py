@@ -480,17 +480,71 @@ class HandcraftedNLU(Service):
         else:
             print('No language')
 
-class TellerNLU(Service):
+class TellerNLU(HandcraftedNLU):
 
-    def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger):
+    def __init__(self, domain: JSONLookupDomain, logger):
         Service.__init__(self, domain=domain) 
         self.logger = logger
         self.logger.info("hello i'm here")
-        self.bsae_folder = os.path.join(get_root_dir(), 'resources', 'teller')
+        self.base_folder = os.path.join(get_root_dir(), 'resources', 'teller')
         self.domain_name = "courses"
         self.logger.info("init teller nlu")
+
+        # for user acts that depends on previous history
+        # e.g. confirm, deny, don't care, request
+        self.sys_act_info = {
+            'last_act': None, 
+            'lastInformedPrimKeyVal': None,
+            'lastRequestSlot': None
+        }
+
         # load request regex and inform regex
         self._initialize()
+
+    
+    def _initialize(self):
+        """ Loads the regex files
+        """
+        # hello, bye, deny, affirm, thanks, repeat, reqalts, dontcare, req everything
+        self.general_regex = json.load(open(self.base_folder + '/GeneralRules.json'))
+        self.request_regex = json.load(open(self.base_folder + '/CoursesRequestRules.json'))
+        self.inform_regex = json.load(open(self.base_folder + '/CoursesInformRules.json'))
+
+
+    def dialog_start(self) -> dict:
+        """ The ancestor class impl is pass, NLU set the prev
+        sys act as none, and return nothing.
+        We just say hi here.
+        """
+        self.sys_act_info = {
+            'last_act': None, 
+            'lastInformedPrimKeyVal': None,
+            'lastRequestSlot': None
+        }
+        self.logger.info("hello, the dialog starts!")
+
+
+    @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"]) 
+    def extract_user_acts(self, user_utterance: str=None) -> dict(user_acts=List[UserAct]):
+        """ Detect User acts
+        """
+
+        self.logger.info(f"I received a user utt: {user_utterance}")
+
+        self.user_acts = []
+
+        if user_utterance is not None:
+            self.logger.info("user utterance is not none")
+            user_utterance = user_utterance.strip()
+            self._match_general_act(user_utterance)
+
+        self.logger.info(f"here's user acts {self.user_acts}")    
+        return {'user_acts': self.user_acts}
+
+    @PublishSubscribe(sub_topics=["sys_state"])
+    def _update_sys_act_info(self, sys_state):
+        self.logger.info("receive sys state")
+    
 
     
 

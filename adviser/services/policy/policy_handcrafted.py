@@ -135,6 +135,8 @@ class HandcraftedPolicy(Service):
         # If user only says hello, request a random slot to move dialog along
         elif UserActionType.Hello in beliefstate["user_acts"] or UserActionType.SelectDomain in beliefstate["user_acts"]:
             # as long as there are open slots, choose one randomly
+            self.logger.info("looks like we got a hello?")
+            self.logger.info(f"user act list {beliefstate['user_acts']}")
             if self._get_open_slot(beliefstate):
                 sys_act = SysAct()
                 sys_act.type = SysActionType.Request
@@ -177,6 +179,7 @@ class HandcraftedPolicy(Service):
 
         """
         act_types_lst = beliefstate["user_acts"]
+        self.logger.info(f"---------------we're trying remove sth {act_types_lst}")
         # These are filler actions, so if there are other non-filler acions, remove them from
         # the list of action types
         while len(act_types_lst) > 1:
@@ -185,6 +188,7 @@ class HandcraftedPolicy(Service):
             elif UserActionType.Bad in act_types_lst:
                 act_types_lst.remove(UserActionType.Bad)
             elif UserActionType.Hello in act_types_lst:
+                self.logger.info("we're removing hello")
                 act_types_lst.remove(UserActionType.Hello)
             else:
                 break
@@ -560,3 +564,71 @@ class HandcraftedPolicy(Service):
             # Using constraints here rather than results to deal with empty
             # results sets (eg. user requests something impossible) --LV
             sys_act.add_value(c, constraints[c])
+
+
+class TellerPolicy(HandcraftedPolicy):
+
+    def __init__(self, domain, logger):
+        self.first_turn = True
+        Service.__init__(self, domain=domain)
+        self.logger = logger
+        self.current_suggestions = []
+        self.s_index = 0
+
+    def dialog_start(self):
+        """ TODO: Reset the policy after each dialog
+        """
+        self.turns = 0
+        self.first_turn = True
+        self.current_suggestions = []
+        self.s_index = 0
+        self.logger.info("hi, policy starts!")
+
+
+    @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_act", "sys_state"])
+    def choose_sys_act(self, beliefstate):
+        self.logger.info("receiving a belief state")
+        self.turns += 1
+
+        # the following block means do nothing for the very 
+        # beginning, toggle the sys to say welcome
+        sys_state = {}
+        if self.first_turn and not beliefstate['user_acts']:
+            self.first_turn = False
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Welcome
+            sys_state["last_act"] = sys_act
+            return {'sys_act': sys_act, "sys_state": sys_state}
+        
+        elif self.first_turn:
+            self.first_turn = False
+
+        # TODO: when self.turns >= max_turns
+
+        # if there're more than one request/intentions in the 
+        # utt, remove the filler act
+        # e.g. Hello! I'm looking for ...
+        # then remove Hello.
+        self._remove_gen_actions(beliefstate)
+
+        if UserActionType.Bad in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Bad
+        # if the action is 'bye' tell system to end dialog
+        elif UserActionType.Bye in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Bye
+        elif UserActionType.Thanks in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.RequestMore
+        elif UserActionType.Hello in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Welcome
+            # TODO: clever sys act
+            self.logger.info("hello!")
+
+        # TODO: when will last_act in sys_state
+        if "last_act" not in sys_state:
+            sys_state["last_act"] = sys_act
+
+        return {'sys_act': sys_act, 'sys_state': sys_state}
