@@ -24,7 +24,7 @@ from services.service import PublishSubscribe
 from services.service import Service
 from utils import SysAct, SysActionType
 from utils.beliefstate import BeliefState
-from utils.domain.jsonlookupdomain import JSONLookupDomain
+from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
 from utils.logger import DiasysLogger
 from utils.useract import UserActionType
 
@@ -568,7 +568,7 @@ class HandcraftedPolicy(Service):
 
 class TellerPolicy(HandcraftedPolicy):
 
-    def __init__(self, domain, logger):
+    def __init__(self, domain: TellerDomain, logger):
         self.first_turn = True
         Service.__init__(self, domain=domain)
         self.logger = logger
@@ -622,13 +622,30 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act = SysAct()
             sys_act.type = SysActionType.RequestMore
         elif UserActionType.Hello in beliefstate["user_acts"]:
+            # if user only says hello, ask how many credits
+            # they want to earn for the next semester. if
+            # that slot is answered, then grasp another open
+            # slot
             sys_act = SysAct()
-            sys_act.type = SysActionType.Welcome
-            # TODO: clever sys act
+            sys_act.type = SysActionType.Request
+            slot = self._get_open_slot(beliefstate)
+            sys_act.add_value(slot)
             self.logger.info("hello!")
+            self.logger.info(f"we get the slot {slot}")
 
-        # TODO: when will last_act in sys_state
+        # TODO: when will last_act be in sys_state
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
+    
+
+    def _get_open_slot(self, beliefstate: BeliefState):
+        # TODO
+        filled_slots, _ = self._get_constraints(beliefstate)
+        requestable_slots = self.domain.high_lvl_requestable()
+        for slot in requestable_slots:
+            if slot not in filled_slots:
+                return slot
+        self.logger.info("Warning, returning a None object.")
+        return None

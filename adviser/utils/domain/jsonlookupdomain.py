@@ -169,6 +169,7 @@ class JSONLookupDomain(Domain):
                 'resources', 'databases', self.name + '.db')
             self.db = self._load_db_to_memory(root_dir + '/' + sqllite_db_file)
         cursor = self.db.cursor()
+        print(f'----------------------------------------- querying {query_str}')
         cursor.execute(query_str)
         res = cursor.fetchall()
         return res
@@ -215,3 +216,19 @@ class JSONLookupDomain(Domain):
     def get_keyword(self):
         if "keyword" in self.ontology_json:
             return self.ontology_json['keyword']
+
+class TellerDomain(JSONLookupDomain):
+
+    def __init__(self, name, json_ontology_file, sqllite_db_file, display_name):
+        """ Load local db to memory
+        """
+        super().__init__(name, json_ontology_file, sqllite_db_file, display_name)
+
+
+    def high_lvl_requestable(self):
+        """ Return a high-level requestable slot. 
+        A high-level requestable slot cannot be directly found in the db attr list,
+        but is related to the ultimate task.
+        e.g. the total credit a user need
+        """
+        return ["total_credits"]

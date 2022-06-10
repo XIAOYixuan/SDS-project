@@ -48,20 +48,21 @@ def load_nlg(backchannel: bool, domain = None, logger=None):
     return nlg
 
 def load_domain(backchannel: bool = False, logger = None):
-    from utils.domain.jsonlookupdomain import JSONLookupDomain
+    from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
     from services.nlu.nlu import TellerNLU, HandcraftedNLU
     from services.nlg.nlg import TellerNLG, HandcraftedNLG
     from services.policy import TellerPolicy, HandcraftedPolicy
     from services.bst.bst import TellerBST
-    domain = JSONLookupDomain('ImsLecturers', display_name="Lecturers")
     use_teller = True
     # use_teller = False 
     if use_teller:
+        domain = TellerDomain(name='Courses', json_ontology_file="resources/teller/Courses.json", sqllite_db_file="resources/teller/Courses.db", display_name="Courses")
         nlu = TellerNLU(domain=domain, logger=logger)
         bst = TellerBST(domain=domain, logger=logger)
         policy = TellerPolicy(domain=domain, logger=logger)
         nlg = TellerNLG(domain=domain, logger=logger)
     else:
+        domain = JSONLookupDomain('ImsLecturers', display_name="Lecturers")
         nlu = HandcraftedNLU(domain=domain, logger=logger)
         bst = HandcraftedBST(domain=domain, logger=logger)
         policy = HandcraftedPolicy(domain=domain, logger=logger)
