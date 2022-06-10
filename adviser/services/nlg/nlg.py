@@ -167,11 +167,20 @@ class TellerNLG(HandcraftedNLG):
 
         self.logger = logger
 
-
-    @PublishSubscribe(sub_topics=["sys_act"], pub_topics=["sys_utterance"])
-    def publish_system_utterance(self, sys_act: SysAct = None) -> dict(sys_utterance=str):
+    
+    def generate_system_utterance(self, sys_act: SysAct = None) -> str:
         self.logger.info("receive sys act")
         if sys_act.type == SysActionType.Bye:
-            return {'sys_utterance': 'bye'}
+            return "Glad to talk with you, bye!" 
+        elif sys_act.type == SysActionType.Welcome:
+            return "Welcome!"
+        elif sys_act.type == SysActionType.Request:
+            return self.__process_request(sys_act)
+        else:
+            self.logger.info(f"let's check the type {sys_act.type}")
+            return "Sorry, I don't understand!"
 
-        return {'sys_utterance': 'copy that'}
+
+    def __process_request(self, sys_act: SysAct = None):
+        if "total_credits" in sys_act.slot_values:
+            return "How many credits would you like to earn?"
