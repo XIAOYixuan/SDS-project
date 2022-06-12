@@ -498,6 +498,12 @@ class TellerNLU(HandcraftedNLU):
             'lastRequestSlot': None
         }
 
+        # requested by _match_inform, it's always false at each turn, 
+        # will be changed to true in match_general
+        self.req_everything = False
+        self.slots_informed = set()
+        self.slots_requested = set()
+
         # load request regex and inform regex
         self._initialize()
 
@@ -528,22 +534,45 @@ class TellerNLU(HandcraftedNLU):
     def extract_user_acts(self, user_utterance: str=None) -> dict(user_acts=List[UserAct]):
         """ Detect User acts
         """
+        self.req_everything = False
+        self.slots_informed = set()
+        self.slots_requested = set()
 
         self.logger.info(f"I received a user utt: {user_utterance}")
 
         self.user_acts = []
 
         if user_utterance is not None:
-            self.logger.info("user utterance is not none")
             user_utterance = user_utterance.strip()
             self._match_general_act(user_utterance)
+            self._match_domain_specific_act(user_utterance)
 
-        self.logger.info(f"here's user acts {self.user_acts}")    
+        self.logger.info(f"here's user acts [{self.user_acts}]")    
         return {'user_acts': self.user_acts}
+
+    
+    def _match_inform(self, user_utterance):
+        # for total_credits
+        # self.logger(f"user informable {self.USER_INFORMABLE}")
+        for slot in ["total_credits"]:
+            for value in self.inform_regex[slot]:
+                if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
+                    self.logger.info("found it")
+                    self._add_inform(user_utterance, slot, value)
+
+                self.logger.info(f"the value for slot {slot} is {value}")
+
+
+    def _match_request(self, user_utterance: str):
+        pass
+
 
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
         self.logger.info("receive sys state")
+
+
+    
     
 
     

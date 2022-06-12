@@ -18,6 +18,7 @@
 ###############################################################################
 
 from collections import defaultdict
+from os import stat
 from typing import List, Dict
 
 from services.service import PublishSubscribe
@@ -164,6 +165,7 @@ class HandcraftedPolicy(Service):
             self.logger.dialog_turn("System Action: " + str(sys_act))
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
+        self.logger.info(f"The final sys act is {sys_act.type} {sys_act.slot_values}")
         return {'sys_act': sys_act, "sys_state": sys_state}
 
     def _remove_gen_actions(self, beliefstate: BeliefState):
@@ -179,7 +181,6 @@ class HandcraftedPolicy(Service):
 
         """
         act_types_lst = beliefstate["user_acts"]
-        self.logger.info(f"---------------we're trying remove sth {act_types_lst}")
         # These are filler actions, so if there are other non-filler acions, remove them from
         # the list of action types
         while len(act_types_lst) > 1:
@@ -326,7 +327,9 @@ class HandcraftedPolicy(Service):
 
         # Otherwise we need to query the db to determine next action
         results = self._query_db(beliefstate)
+        self.logger.info(f"querying the db, results are {results}")
         sys_act = self._raw_action(results, beliefstate)
+        self.logger.info(f"sys act is {sys_act}")
 
         # requests are fairly easy, if it's a request, return it directly
         if sys_act.type == SysActionType.Request:
@@ -566,6 +569,50 @@ class HandcraftedPolicy(Service):
             sys_act.add_value(c, constraints[c])
 
 
+#TODO: move this to a new file
+#TODO: uses the sub-pub patter
+class TellerCoursePicker:
+    """ This class carries all the functions to select the courses
+    """
+    def __init__(self) -> None:
+        self.total_credits = 100
+        self.candidates = []
+        self.solution = []
+
+    def select_courses(self, candidates, total_credits):
+        self.total_credits = int(total_credits)
+        self.candidates = candidates
+        self.solution = []
+        success = self._select_courses()
+        return self.solution
+
+
+    def _select_courses(self, cur_credits = 0, cur_id = 0):
+        # TODO: add more constraints here
+        # TODO: need optimization, pruning
+        # TODO: need to maintain a dependency graph, telling the module which courses are choosable 
+        if cur_id >= len(self.candidates):
+            return False
+        # print(f'cur credits: {cur_credits} total_credits: {self.total_credits} cur_id : {cur_id}')
+        # option 1: choose myself
+        new_credit = cur_credits + int(self.candidates[cur_id]['Credit'])
+        if new_credit == self.total_credits:
+            self.solution.append(self.candidates[cur_id]['Name'])
+            # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
+            return True
+        elif self._select_courses(new_credit, cur_id+1):
+            self.solution.append(self.candidates[cur_id]['Name'])
+            # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
+            return True
+        elif self._select_courses(cur_credits, cur_id+1):
+            # option 2: don't choose myself
+            # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
+            return True
+        else:
+            # print(f"fail at {cur_id}")
+            return False
+
+
 class TellerPolicy(HandcraftedPolicy):
 
     def __init__(self, domain: TellerDomain, logger):
@@ -574,6 +621,7 @@ class TellerPolicy(HandcraftedPolicy):
         self.logger = logger
         self.current_suggestions = []
         self.s_index = 0
+        self.course_picker = TellerCoursePicker()
 
     def dialog_start(self):
         """ TODO: Reset the policy after each dialog
@@ -587,7 +635,6 @@ class TellerPolicy(HandcraftedPolicy):
 
     @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_act", "sys_state"])
     def choose_sys_act(self, beliefstate):
-        self.logger.info("receiving a belief state")
         self.turns += 1
 
         # the following block means do nothing for the very 
@@ -630,14 +677,33 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act.type = SysActionType.Request
             slot = self._get_open_slot(beliefstate)
             sys_act.add_value(slot)
-            self.logger.info("hello!")
-            self.logger.info(f"we get the slot {slot}")
+            self.logger.info(f"we found the slot [{slot}]")
+        elif UserActionType.Inform in beliefstate["user_acts"]:
+            self.logger.info("we found an INFORM!")
+            #TODO: if there's an inform, there must also be a high-lvl inform
+            sys_act = SysAct()
+            sys_act.type = SysActionType.InformByName
+            self._process_total_credits(beliefstate, sys_act)
+        else:
+            self.logger.info("ERROR: sorry, unk type")
+            exit(0)
 
         # TODO: when will last_act be in sys_state
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
+
+
+    def _process_total_credits(self, beliefstate: BeliefState, sys_act: SysAct):
+        self.logger.info(f"highlvl inform is {beliefstate['high_lvl_inform']}")
+        results = self._query_db(beliefstate)
+        total_credits = beliefstate["high_lvl_inform"]["total_credits"]
+        solution = self.course_picker.select_courses(results, total_credits)
+        for course in solution:
+            sys_act.add_value('courses', course)
+        sys_act.add_value('total_credits', total_credits)
+
     
 
     def _get_open_slot(self, beliefstate: BeliefState):

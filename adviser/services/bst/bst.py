@@ -58,9 +58,7 @@ class HandcraftedBST(Service):
             self._reset_informs(user_acts)
             self._reset_requests()
             self.bs["user_acts"] = self._get_all_usr_action_types(user_acts)
-
             self._handle_user_acts(user_acts)
-
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
@@ -176,14 +174,26 @@ class TellerBST(HandcraftedBST):
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
-        self.logger.info(f"update beliefstate {self.bs}")
+        self.logger.info(f"update beliefstate")
+        print(self.bs)
         return {'beliefstate': self.bs}
 
 
     def _handle_user_acts(self, user_acts: List[UserAct]):
-        # the super() will reset the user in
-        pass
+        for act in user_acts:
+            if act.type == UserActionType.Inform:
+                self._handle_user_act_inform(act)
+            if act.slot in self.domain.high_lvl_requestable():
+                # TODO: self._handle_user_high_lvl_act_inform(act)
+                # TODO: how about other high lvl inform
+                # TODO: init bs with highlvl_inform
+                self.bs["high_lvl_inform"] = {act.slot:act.text}
 
+    
+    def _handle_user_act_inform(self, act: UserAct):
+        #TODO, loop over all courses and only pick those smaller than total_credits
+        assert act.slot == "total_credits"
+        self.bs['informs']['credit'] = {'3': 1.0}
 
     def dialog_start(self):
         """ The original comment says it returns the belief state
