@@ -169,7 +169,6 @@ class JSONLookupDomain(Domain):
                 'resources', 'databases', self.name + '.db')
             self.db = self._load_db_to_memory(root_dir + '/' + sqllite_db_file)
         cursor = self.db.cursor()
-        print(f'----------------------------------------- querying {query_str}')
         cursor.execute(query_str)
         res = cursor.fetchall()
         return res
