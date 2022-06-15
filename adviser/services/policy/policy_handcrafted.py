@@ -577,20 +577,107 @@ class TellerCoursePicker:
         self.total_credits = 100
         self.candidates = []
         self.solution = []
+        # store the start minute and the end minute of the event
+        # TODO: binary search to speedup
+        self.time_slots = []
+        self.day2min = self._build_day2min_mapper() 
 
     def select_courses(self, candidates, total_credits):
         self.total_credits = int(total_credits)
         self.candidates = candidates
+
+        # update time format
+        for candidate in self.candidates:
+            candidate["Dates"] = self._change_time_format(candidate)
+
+        # prepare time conflict graph
+        # TODO: has memory redundacy, e.g., has both key i+j and j+i 
+        self.time_conflict_graph = self._build_time_conflict_relation_graph()
         self.solution = []
+        self.stack = []
         success = self._select_courses()
+        if not success:
+            return []
         return self.solution
 
 
+    def _has_overlap(self, times_a, times_b):
+        for a in times_a:
+            for b in times_b:
+                overlap = max(0, min(a[1], b[1]) - max(a[0], b[0]))
+                if overlap > 0:
+                    return True
+        return False
+
+
+    def _build_time_conflict_relation_graph(self):
+        has_conflicts = {}
+        for course_i in self.candidates:
+            i = course_i["Name"]
+            for course_j in self.candidates:
+                j = course_j["Name"]
+                if i == j: continue
+                has_conflicts[i+"+"+j] = self._has_overlap(course_i["Dates"], course_j["Dates"])
+        return has_conflicts
+
+
+    def _build_day2min_mapper(self):
+        days = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"]
+        cur_offset = 0
+        day2min = {}
+        one_day = 24*3600
+
+        for day in days:
+            day2min[day] = cur_offset 
+            cur_offset += one_day
+        return day2min
+
+
+    def _change_time_format(self, candidate):
+        """ Change time format from Date to minutes
+        """
+        dates = candidate["Dates"].split(";")
+        time_slot_in_minutes = []
+        for date in dates:
+            date = date.strip()
+            day, duration = date.split('.')
+            min_offset = self.day2min[day.strip()]
+            start_time, end_time = duration.split('-')
+            start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
+            time_slot_in_minutes.append((min_offset+start_time, min_offset+end_time))
+        return time_slot_in_minutes
+
+
+    def _clock2min(self, clock_time):
+        clock_time = clock_time.strip()
+        hh, mm = clock_time.split(":")
+        hh, mm = int(hh.strip()), int(mm.strip())
+        return hh*60 + mm
+            
+
+    def _has_time_conflicts(self, course_id):
+        cur_name = self.candidates[course_id]["Name"]
+        for pre in self.stack:
+            pre_name = self.candidates[pre]["Name"]
+            if pre_name == cur_name:
+                continue 
+            name_bind = pre_name + "+" + cur_name 
+            if self.time_conflict_graph[name_bind]:
+                return True
+        return False
+
+    
     def _select_courses(self, cur_credits = 0, cur_id = 0):
         # TODO: add more constraints here
         # TODO: need optimization, pruning
-        # TODO: need to maintain a dependency graph, telling the module which courses are choosable 
+        # TODO: need to maintain a dependency graph, telling the module which courses are choosable
+        self.stack.append(cur_id)
         if cur_id >= len(self.candidates):
+            self.stack.pop()
+            return False
+
+        if self._has_time_conflicts(cur_id):
+            self.stack.pop()
             return False
         # print(f'cur credits: {cur_credits} total_credits: {self.total_credits} cur_id : {cur_id}')
         # option 1: choose myself
@@ -598,17 +685,21 @@ class TellerCoursePicker:
         if new_credit == self.total_credits:
             self.solution.append(self.candidates[cur_id]['Name'])
             # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
+            self.stack.pop()
             return True
         elif self._select_courses(new_credit, cur_id+1):
             self.solution.append(self.candidates[cur_id]['Name'])
             # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
+            self.stack.pop()
             return True
         elif self._select_courses(cur_credits, cur_id+1):
             # option 2: don't choose myself
             # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
+            self.stack.pop()
             return True
         else:
             # print(f"fail at {cur_id}")
+            self.stack.pop()
             return False
 
 
