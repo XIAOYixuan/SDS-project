@@ -181,19 +181,10 @@ class TellerBST(HandcraftedBST):
 
     def _handle_user_acts(self, user_acts: List[UserAct]):
         for act in user_acts:
-            if act.type == UserActionType.Inform:
-                self._handle_user_act_inform(act)
-            if act.slot in self.domain.high_lvl_requestable():
-                # TODO: self._handle_user_high_lvl_act_inform(act)
-                # TODO: how about other high lvl inform
-                # TODO: init bs with highlvl_inform
-                self.bs["high_lvl_inform"] = {act.slot:act.text}
-
-    
-    def _handle_user_act_inform(self, act: UserAct):
-        #TODO, loop over all courses and only pick those smaller than total_credits
-        assert act.slot == "total_credits"
-        self.bs['informs']['credit'] = {'3': 1.0}
+            if act.type == UserActionType.Inform and \
+                act.slot in self.domain.high_level_slots():
+                new_slot_values = self.domain.break_down_informs(act.slot, act.text) 
+                self.bs["high_level_informs"][act.slot] = (act.text, new_slot_values)
 
     def dialog_start(self):
         """ The original comment says it returns the belief state

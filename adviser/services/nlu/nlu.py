@@ -554,7 +554,7 @@ class TellerNLU(HandcraftedNLU):
     def _match_inform(self, user_utterance):
         # for total_credits
         # self.logger(f"user informable {self.USER_INFORMABLE}")
-        for slot in ["total_credits"]:
+        for slot in self.domain.high_level_slots(): 
             for value in self.inform_regex[slot]:
                 if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
                     self.logger.info("found it")

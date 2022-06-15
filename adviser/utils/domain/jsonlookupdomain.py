@@ -222,12 +222,51 @@ class TellerDomain(JSONLookupDomain):
         """ Load local db to memory
         """
         super().__init__(name, json_ontology_file, sqllite_db_file, display_name)
+        self.slot_map = {
+            "total_credits": "Credit"
+        }
 
 
-    def high_lvl_requestable(self):
-        """ Return a high-level requestable slot. 
-        A high-level requestable slot cannot be directly found in the db attr list,
+
+    def high_level_slots(self):
+        """ Return the name of high-level slots. 
+        A high-level slot cannot be directly found in the db attr list,
         but is related to the ultimate task.
         e.g. the total credit a user need
         """
         return ["total_credits"]
+
+    
+    def break_down_informs(self, slot_name, value):
+        """ break down high level informs to smaller one
+        """
+        #TODO: extend it to other fields
+        slot_value_pairs = []
+        if slot_name == "total_credits":
+            value = int(value)
+            assert value % 3 == 0 and value != 0
+            sub_slot = self.slot_map[slot_name]
+            possible_values = self.get_possible_values(sub_slot)
+            for v in possible_values:
+                if int(v) > value:
+                    continue
+                sv = {sub_slot:v}
+                slot_value_pairs.append(sv)
+        else:
+            assert False and "not impl"
+
+        return slot_value_pairs
+
+
+    def uniq_list(self, results):
+        """unique the list using the primary key
+        """
+        uniq_dict = {}
+        pkey = self.get_primary_key()
+        for item in results:
+            uniq_dict[item[pkey]] = item
+        results = []
+        for key in uniq_dict:
+            results.append(uniq_dict[key])
+        return results
+

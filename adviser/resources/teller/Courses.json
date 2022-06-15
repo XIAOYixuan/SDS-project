@@ -9,29 +9,51 @@
     ],
     "informable": {
         "Credit": [
-            "3"
+            "3",
+            "6"
         ],
         "Dates": [
-            "Tue. 2:00-3:30pm;",
-            "Wed. 9:45-11:15am;"
+            "Fri. 8:00-9:30; Fri. 9:45-11:15",
+            "Fri. 9:45-11:15;Mon. 11:30-13:00",
+            "Thur. 17:30-19:00",
+            "Tue. 14:00-15:30;Tue. 15:45-17:15",
+            "Tue. 2:00-3:30",
+            "Wed. 14:00-15:30",
+            "Wed. 9:45-11:15"
         ],
         "Field": [
-            "NLP, Speech,programming",
-            "NLP, speech"
+            "Linguistics; programming",
+            "NLP; Linguistics",
+            "NLP; Speech",
+            "NLP; Speech,programming"
         ],
         "Format": [
+            "lecture",
             "project",
             "seminar"
         ],
         "ID": [
             "1",
-            "2"
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
         ],
         "Module": [
+            "Advanced NLP",
+            "Compulsory",
+            "Core Linguistics",
             "Spoken Language Understanding"
         ],
         "Name": [
+            "Advance Machine Learning in Natural Language Processing",
+            "Computational Linguistics Team Laboratory: Phonetics",
             "Dialog Modelling",
+            "Model Projection",
+            "Multilinguality and linguistic typology in NLP",
+            "Parsing",
             "Spoken Dialog System"
         ],
         "Sms": [

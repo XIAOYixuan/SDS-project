@@ -18,7 +18,6 @@
 ###############################################################################
 
 from collections import defaultdict
-from os import stat
 from typing import List, Dict
 
 from services.service import PublishSubscribe
@@ -693,23 +692,42 @@ class TellerPolicy(HandcraftedPolicy):
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
+    
+
+    def _query_db(self, beliefstate: BeliefState):
+        """ Query the courses whose credits <= total credits
+        TODO: query the courses with specific field
+        """
+        # when there's a primary name
+        # name = self._get_name(beliefstate)
+        results = []
+        if len(beliefstate["informs"]) != 0:
+            results = super()._query_db(beliefstate)
+        else:
+            high_level_dict = beliefstate["high_level_informs"]
+            for slot in high_level_dict: 
+                for constraint in high_level_dict[slot][-1]:
+                    cur_results = self.domain.find_entities(constraint)
+                    results += cur_results
+        self.logger.info(f"results for query: {results}")
+        results = self.domain.uniq_list(results)
+        return results 
 
 
     def _process_total_credits(self, beliefstate: BeliefState, sys_act: SysAct):
-        self.logger.info(f"highlvl inform is {beliefstate['high_lvl_inform']}")
         results = self._query_db(beliefstate)
-        total_credits = beliefstate["high_lvl_inform"]["total_credits"]
+        total_credits = beliefstate.get_high_level_inform_value("total_credits")
+        total_credits = int(total_credits)
         solution = self.course_picker.select_courses(results, total_credits)
         for course in solution:
             sys_act.add_value('courses', course)
         sys_act.add_value('total_credits', total_credits)
 
-    
 
     def _get_open_slot(self, beliefstate: BeliefState):
         # TODO
         filled_slots, _ = self._get_constraints(beliefstate)
-        requestable_slots = self.domain.high_lvl_requestable()
+        requestable_slots = self.domain.high_level_slots()
         for slot in requestable_slots:
             if slot not in filled_slots:
                 return slot
