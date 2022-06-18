@@ -88,6 +88,9 @@ class BeliefState:
 
     def get_high_level_inform_value(self, key):
         return self._history[-1]["high_level_informs"][key][0]
+    
+    def get_high_level_inform_sub_results(self, key):
+        return self._history[-1]["high_level_informs"][key][1]
 
 
     def start_new_turn(self):

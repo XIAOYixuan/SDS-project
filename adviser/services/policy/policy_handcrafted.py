@@ -580,7 +580,13 @@ class TellerCoursePicker:
         # store the start minute and the end minute of the event
         # TODO: binary search to speedup
         self.time_slots = []
-        self.day2min = self._build_day2min_mapper() 
+        self.day2min = self._build_day2min_mapper()
+        self.user_schedules = []
+
+    
+    def update_user_schedules(self, schedules):
+        self.user_schedules = schedules
+
 
     def select_courses(self, candidates, total_credits):
         self.total_credits = int(total_credits)
@@ -589,7 +595,9 @@ class TellerCoursePicker:
         # update time format
         for candidate in self.candidates:
             candidate["Dates"] = self._change_time_format(candidate)
-
+        self.user_schedules = self._change_time_format(self.user_schedules)
+        self._remove_user_conflicts()
+        
         # prepare time conflict graph
         # TODO: has memory redundacy, e.g., has both key i+j and j+i 
         self.time_conflict_graph = self._build_time_conflict_relation_graph()
@@ -599,6 +607,15 @@ class TellerCoursePicker:
         if not success:
             return []
         return self.solution
+
+
+    def _remove_user_conflicts(self):
+        new_candidates = []
+        for candidate in self.candidates:
+            if self._has_overlap(candidate["Dates"], self.user_schedules):
+                continue
+            new_candidates.append(candidate)
+        self.candidates = new_candidates
 
 
     def _has_overlap(self, times_a, times_b):
@@ -622,7 +639,7 @@ class TellerCoursePicker:
 
 
     def _build_day2min_mapper(self):
-        days = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"]
+        days = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
         cur_offset = 0
         day2min = {}
         one_day = 24*3600
@@ -636,10 +653,13 @@ class TellerCoursePicker:
     def _change_time_format(self, candidate):
         """ Change time format from Date to minutes
         """
-        dates = candidate["Dates"].split(";")
+        if isinstance(candidate, dict):
+            dates = candidate["Dates"].split(";")
+        else:
+            dates = candidate
         time_slot_in_minutes = []
         for date in dates:
-            date = date.strip()
+            date = date.strip().lower()
             day, duration = date.split('.')
             min_offset = self.day2min[day.strip()]
             start_time, end_time = duration.split('-')
@@ -773,7 +793,8 @@ class TellerPolicy(HandcraftedPolicy):
             #TODO: if there's an inform, there must also be a high-lvl inform
             sys_act = SysAct()
             sys_act.type = SysActionType.InformByName
-            self._process_total_credits(beliefstate, sys_act)
+            # self._process_total_credits(beliefstate, sys_act)
+            self._process_user_schedules(beliefstate, sys_act)
         else:
             self.logger.info("ERROR: sorry, unk type")
             exit(0)
@@ -803,17 +824,33 @@ class TellerPolicy(HandcraftedPolicy):
         self.logger.info(f"results for query: {results}")
         results = self.domain.uniq_list(results)
         return results 
-
-
+    
+    
     def _process_total_credits(self, beliefstate: BeliefState, sys_act: SysAct):
         results = self._query_db(beliefstate)
-        total_credits = beliefstate.get_high_level_inform_value("total_credits")
+        total_credits = beliefstate.get_high_level_inform_value(self.domain.total_credits)
         total_credits = int(total_credits)
         solution = self.course_picker.select_courses(results, total_credits)
         for course in solution:
             sys_act.add_value('courses', course)
-        sys_act.add_value('total_credits', total_credits)
+        sys_act.add_value(self.domain.total_credits, total_credits)
 
+
+    def _process_user_schedules(self, beliefstate: BeliefState, sys_act: SysAct):
+        # TODO: a universal method for these
+        high_lvl_name = self.domain.user_schedules
+        slot_name = self.domain.slot_map[high_lvl_name]
+        for schedule in beliefstate.get_high_level_inform_sub_results(self.domain.user_schedules):
+            sys_act.add_value(high_lvl_name, schedule[slot_name])
+
+        self.course_picker.update_user_schedules(sys_act.get_values(high_lvl_name))
+        self.logger.info(f"----------------------------------- fuck {self.course_picker.user_schedules}")
+        results = super()._query_db(beliefstate)
+        solution = self.course_picker.select_courses(results, 15)
+        for course in solution:
+            sys_act.add_value('courses', course)
+        sys_act.add_value(self.domain.total_credits, '15')
+    
 
     def _get_open_slot(self, beliefstate: BeliefState):
         # TODO
