@@ -117,7 +117,9 @@ class HandcraftedNLU(Service):
 
         """
         self.sys_act_info = {
-            'last_act': None, 'lastInformedPrimKeyVal': None, 'lastRequestSlot': None}
+            'last_act': None, 
+            'lastInformedPrimKeyVal': None, 
+            'lastRequestSlot': None}
         self.user_acts = []
         self.slots_informed = set()
         self.slots_requested = set()
@@ -547,7 +549,10 @@ class TellerNLU(HandcraftedNLU):
             self._match_general_act(user_utterance)
             self._match_domain_specific_act(user_utterance)
 
-        self.logger.info(f"here's user acts [{self.user_acts}]")    
+        # If nothing else has been matched, set it to bad act
+        if len(self.user_acts) == 0 and self.sys_act_info["last_act"] is not None:
+            self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
+                                              act_type=UserActionType.Bad))
         return {'user_acts': self.user_acts}
 
     
@@ -559,8 +564,7 @@ class TellerNLU(HandcraftedNLU):
                 if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
                     self.logger.info("found it")
                     self._add_inform(user_utterance, slot, value)
-
-                self.logger.info(f"the value for slot {slot} is {value}")
+                    self.logger.info(f"the value for slot {slot} is {value}")
 
 
     def _match_request(self, user_utterance: str):
@@ -569,8 +573,9 @@ class TellerNLU(HandcraftedNLU):
 
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
-        self.logger.info("receive sys state")
-
+        self.logger.info(f"receive sys state, {sys_state}")
+        if "last_act" in sys_state:
+            self.sys_act_info["last_act"] = sys_state["last_act"]
 
     
     
