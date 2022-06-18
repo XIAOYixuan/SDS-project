@@ -117,7 +117,9 @@ class HandcraftedNLU(Service):
 
         """
         self.sys_act_info = {
-            'last_act': None, 'lastInformedPrimKeyVal': None, 'lastRequestSlot': None}
+            'last_act': None, 
+            'lastInformedPrimKeyVal': None, 
+            'lastRequestSlot': None}
         self.user_acts = []
         self.slots_informed = set()
         self.slots_requested = set()
@@ -480,17 +482,103 @@ class HandcraftedNLU(Service):
         else:
             print('No language')
 
-class TellerNLU(Service):
+class TellerNLU(HandcraftedNLU):
 
-    def __init__(self, domain: JSONLookupDomain, logger: DiasysLogger):
+    def __init__(self, domain: JSONLookupDomain, logger):
         Service.__init__(self, domain=domain) 
         self.logger = logger
         self.logger.info("hello i'm here")
-        self.bsae_folder = os.path.join(get_root_dir(), 'resources', 'teller')
+        self.base_folder = os.path.join(get_root_dir(), 'resources', 'teller')
         self.domain_name = "courses"
         self.logger.info("init teller nlu")
+
+        # for user acts that depends on previous history
+        # e.g. confirm, deny, don't care, request
+        self.sys_act_info = {
+            'last_act': None, 
+            'lastInformedPrimKeyVal': None,
+            'lastRequestSlot': None
+        }
+
+        # requested by _match_inform, it's always false at each turn, 
+        # will be changed to true in match_general
+        self.req_everything = False
+        self.slots_informed = set()
+        self.slots_requested = set()
+
         # load request regex and inform regex
         self._initialize()
+
+    
+    def _initialize(self):
+        """ Loads the regex files
+        """
+        # hello, bye, deny, affirm, thanks, repeat, reqalts, dontcare, req everything
+        self.general_regex = json.load(open(self.base_folder + '/GeneralRules.json'))
+        self.request_regex = json.load(open(self.base_folder + '/CoursesRequestRules.json'))
+        self.inform_regex = json.load(open(self.base_folder + '/CoursesInformRules.json'))
+
+
+    def dialog_start(self) -> dict:
+        """ The ancestor class impl is pass, NLU set the prev
+        sys act as none, and return nothing.
+        We just say hi here.
+        """
+        self.sys_act_info = {
+            'last_act': None, 
+            'lastInformedPrimKeyVal': None,
+            'lastRequestSlot': None
+        }
+        self.logger.info("hello, the dialog starts!")
+
+
+    @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"]) 
+    def extract_user_acts(self, user_utterance: str=None) -> dict(user_acts=List[UserAct]):
+        """ Detect User acts
+        """
+        self.req_everything = False
+        self.slots_informed = set()
+        self.slots_requested = set()
+
+        self.logger.info(f"I received a user utt: {user_utterance}")
+
+        self.user_acts = []
+
+        if user_utterance is not None:
+            user_utterance = user_utterance.strip()
+            self._match_general_act(user_utterance)
+            self._match_domain_specific_act(user_utterance)
+
+        # If nothing else has been matched, set it to bad act
+        if len(self.user_acts) == 0 and self.sys_act_info["last_act"] is not None:
+            self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
+                                              act_type=UserActionType.Bad))
+        return {'user_acts': self.user_acts}
+
+    
+    def _match_inform(self, user_utterance):
+        # for total_credits
+        # self.logger(f"user informable {self.USER_INFORMABLE}")
+        for slot in self.domain.high_level_slots(): 
+            for value in self.inform_regex[slot]:
+                if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
+                    self.logger.info("found it")
+                    self._add_inform(user_utterance, slot, value)
+                    self.logger.info(f"the value for slot {slot} is {value}")
+
+
+    def _match_request(self, user_utterance: str):
+        pass
+
+
+    @PublishSubscribe(sub_topics=["sys_state"])
+    def _update_sys_act_info(self, sys_state):
+        self.logger.info(f"receive sys state, {sys_state}")
+        if "last_act" in sys_state:
+            self.sys_act_info["last_act"] = sys_state["last_act"]
+
+    
+    
 
     
 

@@ -24,7 +24,7 @@ from services.service import PublishSubscribe
 from services.service import Service
 from utils import SysAct, SysActionType
 from utils.beliefstate import BeliefState
-from utils.domain.jsonlookupdomain import JSONLookupDomain
+from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
 from utils.logger import DiasysLogger
 from utils.useract import UserActionType
 
@@ -135,6 +135,8 @@ class HandcraftedPolicy(Service):
         # If user only says hello, request a random slot to move dialog along
         elif UserActionType.Hello in beliefstate["user_acts"] or UserActionType.SelectDomain in beliefstate["user_acts"]:
             # as long as there are open slots, choose one randomly
+            self.logger.info("looks like we got a hello?")
+            self.logger.info(f"user act list {beliefstate['user_acts']}")
             if self._get_open_slot(beliefstate):
                 sys_act = SysAct()
                 sys_act.type = SysActionType.Request
@@ -162,6 +164,7 @@ class HandcraftedPolicy(Service):
             self.logger.dialog_turn("System Action: " + str(sys_act))
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
+        self.logger.info(f"The final sys act is {sys_act.type} {sys_act.slot_values}")
         return {'sys_act': sys_act, "sys_state": sys_state}
 
     def _remove_gen_actions(self, beliefstate: BeliefState):
@@ -185,6 +188,7 @@ class HandcraftedPolicy(Service):
             elif UserActionType.Bad in act_types_lst:
                 act_types_lst.remove(UserActionType.Bad)
             elif UserActionType.Hello in act_types_lst:
+                self.logger.info("we're removing hello")
                 act_types_lst.remove(UserActionType.Hello)
             else:
                 break
@@ -322,7 +326,9 @@ class HandcraftedPolicy(Service):
 
         # Otherwise we need to query the db to determine next action
         results = self._query_db(beliefstate)
+        self.logger.info(f"querying the db, results are {results}")
         sys_act = self._raw_action(results, beliefstate)
+        self.logger.info(f"sys act is {sys_act}")
 
         # requests are fairly easy, if it's a request, return it directly
         if sys_act.type == SysActionType.Request:
@@ -560,3 +566,261 @@ class HandcraftedPolicy(Service):
             # Using constraints here rather than results to deal with empty
             # results sets (eg. user requests something impossible) --LV
             sys_act.add_value(c, constraints[c])
+
+
+#TODO: move this to a new file
+#TODO: uses the sub-pub patter
+class TellerCoursePicker:
+    """ This class carries all the functions to select the courses
+    """
+    def __init__(self) -> None:
+        self.total_credits = 100
+        self.candidates = []
+        self.solution = []
+        # store the start minute and the end minute of the event
+        # TODO: binary search to speedup
+        self.time_slots = []
+        self.day2min = self._build_day2min_mapper() 
+
+    def select_courses(self, candidates, total_credits):
+        self.total_credits = int(total_credits)
+        self.candidates = candidates
+
+        # update time format
+        for candidate in self.candidates:
+            candidate["Dates"] = self._change_time_format(candidate)
+
+        # prepare time conflict graph
+        # TODO: has memory redundacy, e.g., has both key i+j and j+i 
+        self.time_conflict_graph = self._build_time_conflict_relation_graph()
+        self.solution = []
+        self.stack = []
+        success = self._select_courses()
+        if not success:
+            return []
+        return self.solution
+
+
+    def _has_overlap(self, times_a, times_b):
+        for a in times_a:
+            for b in times_b:
+                overlap = max(0, min(a[1], b[1]) - max(a[0], b[0]))
+                if overlap > 0:
+                    return True
+        return False
+
+
+    def _build_time_conflict_relation_graph(self):
+        has_conflicts = {}
+        for course_i in self.candidates:
+            i = course_i["Name"]
+            for course_j in self.candidates:
+                j = course_j["Name"]
+                if i == j: continue
+                has_conflicts[i+"+"+j] = self._has_overlap(course_i["Dates"], course_j["Dates"])
+        return has_conflicts
+
+
+    def _build_day2min_mapper(self):
+        days = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"]
+        cur_offset = 0
+        day2min = {}
+        one_day = 24*3600
+
+        for day in days:
+            day2min[day] = cur_offset 
+            cur_offset += one_day
+        return day2min
+
+
+    def _change_time_format(self, candidate):
+        """ Change time format from Date to minutes
+        """
+        dates = candidate["Dates"].split(";")
+        time_slot_in_minutes = []
+        for date in dates:
+            date = date.strip()
+            day, duration = date.split('.')
+            min_offset = self.day2min[day.strip()]
+            start_time, end_time = duration.split('-')
+            start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
+            time_slot_in_minutes.append((min_offset+start_time, min_offset+end_time))
+        return time_slot_in_minutes
+
+
+    def _clock2min(self, clock_time):
+        clock_time = clock_time.strip()
+        hh, mm = clock_time.split(":")
+        hh, mm = int(hh.strip()), int(mm.strip())
+        return hh*60 + mm
+            
+
+    def _has_time_conflicts(self, course_id):
+        cur_name = self.candidates[course_id]["Name"]
+        for pre in self.stack:
+            pre_name = self.candidates[pre]["Name"]
+            if pre_name == cur_name:
+                continue 
+            name_bind = pre_name + "+" + cur_name 
+            if self.time_conflict_graph[name_bind]:
+                return True
+        return False
+
+    
+    def _select_courses(self, cur_credits = 0, cur_id = 0):
+        # TODO: add more constraints here
+        # TODO: need optimization, pruning
+        # TODO: need to maintain a dependency graph, telling the module which courses are choosable
+        self.stack.append(cur_id)
+        if cur_id >= len(self.candidates):
+            self.stack.pop()
+            return False
+
+        if self._has_time_conflicts(cur_id):
+            self.stack.pop()
+            return False
+        # print(f'cur credits: {cur_credits} total_credits: {self.total_credits} cur_id : {cur_id}')
+        # option 1: choose myself
+        new_credit = cur_credits + int(self.candidates[cur_id]['Credit'])
+        if new_credit == self.total_credits:
+            self.solution.append(self.candidates[cur_id]['Name'])
+            # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
+            self.stack.pop()
+            return True
+        elif self._select_courses(new_credit, cur_id+1):
+            self.solution.append(self.candidates[cur_id]['Name'])
+            # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
+            self.stack.pop()
+            return True
+        elif self._select_courses(cur_credits, cur_id+1):
+            # option 2: don't choose myself
+            # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
+            self.stack.pop()
+            return True
+        else:
+            # print(f"fail at {cur_id}")
+            self.stack.pop()
+            return False
+
+
+class TellerPolicy(HandcraftedPolicy):
+
+    def __init__(self, domain: TellerDomain, logger):
+        self.first_turn = True
+        Service.__init__(self, domain=domain)
+        self.logger = logger
+        self.current_suggestions = []
+        self.s_index = 0
+        self.course_picker = TellerCoursePicker()
+
+    def dialog_start(self):
+        """ TODO: Reset the policy after each dialog
+        """
+        self.turns = 0
+        self.first_turn = True
+        self.current_suggestions = []
+        self.s_index = 0
+        self.logger.info("hi, policy starts!")
+
+
+    @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_act", "sys_state"])
+    def choose_sys_act(self, beliefstate):
+        self.turns += 1
+
+        # the following block means do nothing for the very 
+        # beginning, toggle the sys to say welcome
+        sys_state = {}
+        if self.first_turn and not beliefstate['user_acts']:
+            self.first_turn = False
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Welcome
+            sys_state["last_act"] = sys_act
+            return {'sys_act': sys_act, "sys_state": sys_state}
+        
+        elif self.first_turn:
+            self.first_turn = False
+
+        # TODO: when self.turns >= max_turns
+
+        # if there're more than one request/intentions in the 
+        # utt, remove the filler act
+        # e.g. Hello! I'm looking for ...
+        # then remove Hello.
+        self._remove_gen_actions(beliefstate)
+
+        if UserActionType.Bad in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Bad
+        # if the action is 'bye' tell system to end dialog
+        elif UserActionType.Bye in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Bye
+        elif UserActionType.Thanks in beliefstate["user_acts"]:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.RequestMore
+        elif UserActionType.Hello in beliefstate["user_acts"]:
+            # if user only says hello, ask how many credits
+            # they want to earn for the next semester. if
+            # that slot is answered, then grasp another open
+            # slot
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Request
+            slot = self._get_open_slot(beliefstate)
+            sys_act.add_value(slot)
+            self.logger.info(f"we found the slot [{slot}]")
+        elif UserActionType.Inform in beliefstate["user_acts"]:
+            self.logger.info("we found an INFORM!")
+            #TODO: if there's an inform, there must also be a high-lvl inform
+            sys_act = SysAct()
+            sys_act.type = SysActionType.InformByName
+            self._process_total_credits(beliefstate, sys_act)
+        else:
+            self.logger.info("ERROR: sorry, unk type")
+            exit(0)
+
+        # TODO: when will last_act be in sys_state
+        if "last_act" not in sys_state:
+            sys_state["last_act"] = sys_act
+
+        return {'sys_act': sys_act, 'sys_state': sys_state}
+    
+
+    def _query_db(self, beliefstate: BeliefState):
+        """ Query the courses whose credits <= total credits
+        TODO: query the courses with specific field
+        """
+        # when there's a primary name
+        # name = self._get_name(beliefstate)
+        results = []
+        if len(beliefstate["informs"]) != 0:
+            results = super()._query_db(beliefstate)
+        else:
+            high_level_dict = beliefstate["high_level_informs"]
+            for slot in high_level_dict: 
+                for constraint in high_level_dict[slot][-1]:
+                    cur_results = self.domain.find_entities(constraint)
+                    results += cur_results
+        self.logger.info(f"results for query: {results}")
+        results = self.domain.uniq_list(results)
+        return results 
+
+
+    def _process_total_credits(self, beliefstate: BeliefState, sys_act: SysAct):
+        results = self._query_db(beliefstate)
+        total_credits = beliefstate.get_high_level_inform_value("total_credits")
+        total_credits = int(total_credits)
+        solution = self.course_picker.select_courses(results, total_credits)
+        for course in solution:
+            sys_act.add_value('courses', course)
+        sys_act.add_value('total_credits', total_credits)
+
+
+    def _get_open_slot(self, beliefstate: BeliefState):
+        # TODO
+        filled_slots, _ = self._get_constraints(beliefstate)
+        requestable_slots = self.domain.high_level_slots()
+        for slot in requestable_slots:
+            if slot not in filled_slots:
+                return slot
+        self.logger.info("Warning, returning a None object.")
+        return None
