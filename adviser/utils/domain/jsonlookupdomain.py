@@ -223,10 +223,10 @@ class TellerDomain(JSONLookupDomain):
         """
         super().__init__(name, json_ontology_file, sqllite_db_file, display_name)
         # TODO: add these to avoid typos in other functions
-        self.total_credts = "total_credits"
+        self.total_credits = "total_credits"
         self.user_schedules = "user_schedules"
         self.slot_map = {
-            self.total_credts: "Credit",
+            self.total_credits: "Credit",
             self.user_schedules: "Dates"
         }
 
@@ -249,7 +249,7 @@ class TellerDomain(JSONLookupDomain):
             assert False and "not impl"
         sub_slot = self.slot_map[slot_name]
         
-        if slot_name == self.total_credts:
+        if slot_name == self.total_credits:
             value = int(value)
             assert value % 3 == 0 and value != 0
             
