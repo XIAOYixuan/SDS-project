@@ -53,7 +53,8 @@ class HandcraftedBST(Service):
         """
         # save last turn to memory
         self.bs.start_new_turn()
-        self.logger.info("updating bst")
+        self.logger.info("updating bst, before")
+        print(self.bs)
         if user_acts:
             self._reset_informs(user_acts)
             self._reset_requests()
@@ -62,7 +63,8 @@ class HandcraftedBST(Service):
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
-        self.logger.info(f"finish update, belif stack in {self.bs}")
+        self.logger.info(f"finish update, belif stack is ")
+        print(self.bs)
         return {'beliefstate': self.bs}
 
     def dialog_start(self):
@@ -183,8 +185,17 @@ class TellerBST(HandcraftedBST):
         for act in user_acts:
             if act.type == UserActionType.Inform and \
                 act.slot in self.domain.high_level_slots():
-                new_slot_values = self.domain.break_down_informs(act.slot, act.text) 
-                self.bs["high_level_informs"][act.slot] = (act.text, new_slot_values)
+
+                self._handle_high_level_user_acts(act)
+
+    
+    def _handle_high_level_user_acts(self, act: UserAct):
+        if act.value == "dontcare":
+            self.bs["high_level_informs"][act.slot] = (act.text, [])
+        else:
+            new_slot_values = self.domain.break_down_informs(act.slot, act.text) 
+            self.bs["high_level_informs"][act.slot] = (act.text, new_slot_values)
+
 
     def dialog_start(self):
         """ The original comment says it returns the belief state
