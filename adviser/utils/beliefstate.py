@@ -86,8 +86,24 @@ class BeliefState:
         return self._recursive_repr(self._history[-1])
 
 
+    def _high_level_key_exist(self, key):
+        return key in self._history[-1]["high_level_informs"]
+
+
     def get_high_level_inform_value(self, key):
+        if not self._high_level_key_exist(key):
+            return None
         return self._history[-1]["high_level_informs"][key][0]
+    
+
+    def get_high_level_inform_sub_results(self, key):
+        if not self._high_level_key_exist(key):
+            return []
+        return self._history[-1]["high_level_informs"][key][1]
+
+
+    def has_high_level_key(self, key):
+        return key in self._history[-1]["high_level_informs"]
 
 
     def start_new_turn(self):

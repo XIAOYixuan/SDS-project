@@ -326,9 +326,7 @@ class HandcraftedPolicy(Service):
 
         # Otherwise we need to query the db to determine next action
         results = self._query_db(beliefstate)
-        self.logger.info(f"querying the db, results are {results}")
         sys_act = self._raw_action(results, beliefstate)
-        self.logger.info(f"sys act is {sys_act}")
 
         # requests are fairly easy, if it's a request, return it directly
         if sys_act.type == SysActionType.Request:
@@ -580,16 +578,27 @@ class TellerCoursePicker:
         # store the start minute and the end minute of the event
         # TODO: binary search to speedup
         self.time_slots = []
-        self.day2min = self._build_day2min_mapper() 
+        self.day2min = self._build_day2min_mapper()
+        self.user_schedules = []
 
-    def select_courses(self, candidates, total_credits):
+    
+    def update_user_schedules(self, schedules):
+        self.user_schedules = schedules
+
+    
+    def update_total_credits(self, total_credits):
         self.total_credits = int(total_credits)
+
+
+    def select_courses(self, candidates):
         self.candidates = candidates
 
         # update time format
         for candidate in self.candidates:
             candidate["Dates"] = self._change_time_format(candidate)
-
+        self.user_schedules = self._change_time_format(self.user_schedules)
+        self._remove_user_conflicts()
+        
         # prepare time conflict graph
         # TODO: has memory redundacy, e.g., has both key i+j and j+i 
         self.time_conflict_graph = self._build_time_conflict_relation_graph()
@@ -599,6 +608,15 @@ class TellerCoursePicker:
         if not success:
             return []
         return self.solution
+
+
+    def _remove_user_conflicts(self):
+        new_candidates = []
+        for candidate in self.candidates:
+            if self._has_overlap(candidate["Dates"], self.user_schedules):
+                continue
+            new_candidates.append(candidate)
+        self.candidates = new_candidates
 
 
     def _has_overlap(self, times_a, times_b):
@@ -622,7 +640,7 @@ class TellerCoursePicker:
 
 
     def _build_day2min_mapper(self):
-        days = ["Mon", "Tue", "Wed", "Thur", "Fri", "Sat", "Sun"]
+        days = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
         cur_offset = 0
         day2min = {}
         one_day = 24*3600
@@ -636,10 +654,13 @@ class TellerCoursePicker:
     def _change_time_format(self, candidate):
         """ Change time format from Date to minutes
         """
-        dates = candidate["Dates"].split(";")
+        if isinstance(candidate, dict):
+            dates = candidate["Dates"].split(";")
+        else:
+            dates = candidate
         time_slot_in_minutes = []
         for date in dates:
-            date = date.strip()
+            date = date.strip().lower()
             day, duration = date.split('.')
             min_offset = self.day2min[day.strip()]
             start_time, end_time = duration.split('-')
@@ -771,9 +792,7 @@ class TellerPolicy(HandcraftedPolicy):
         elif UserActionType.Inform in beliefstate["user_acts"]:
             self.logger.info("we found an INFORM!")
             #TODO: if there's an inform, there must also be a high-lvl inform
-            sys_act = SysAct()
-            sys_act.type = SysActionType.InformByName
-            self._process_total_credits(beliefstate, sys_act)
+            sys_act, sys_state = self._next_action(beliefstate)
         else:
             self.logger.info("ERROR: sorry, unk type")
             exit(0)
@@ -783,8 +802,39 @@ class TellerPolicy(HandcraftedPolicy):
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
-    
 
+
+    def _next_action(self, beliefstate: BeliefState):
+        slots = self.domain.high_level_slots()
+        for slot in slots:
+            value = beliefstate.get_high_level_inform_value(slot)
+            if value is None:
+                sys_act = SysAct()
+                sys_act.type = SysActionType.Request
+                sys_act.add_value(slot)
+
+                sys_state = {
+                    "last_act": sys_act, 
+                    "lastRequestSlot": list(sys_act.slot_values.keys())}
+                return sys_act, sys_state
+
+        sys_act = SysAct()
+        sys_act.type = SysActionType.InformByName
+        candidates = self._query_db(beliefstate)
+        for slot in slots:
+            # TODO: func dictionary
+            if slot == self.domain.total_credits:
+                self._process_total_credits(beliefstate, sys_act)
+            elif slot == self.domain.user_schedules:
+                self._process_user_schedules(beliefstate, sys_act)
+        
+        solution = self.course_picker.select_courses(candidates)
+        for course in solution:
+            sys_act.add_value('courses', course)
+
+        return sys_act, {"last_act": sys_act}
+    
+    
     def _query_db(self, beliefstate: BeliefState):
         """ Query the courses whose credits <= total credits
         TODO: query the courses with specific field
@@ -800,20 +850,26 @@ class TellerPolicy(HandcraftedPolicy):
                 for constraint in high_level_dict[slot][-1]:
                     cur_results = self.domain.find_entities(constraint)
                     results += cur_results
-        self.logger.info(f"results for query: {results}")
+        # self.logger.info(f"results for query: {results}")
         results = self.domain.uniq_list(results)
         return results 
-
-
+    
+    
     def _process_total_credits(self, beliefstate: BeliefState, sys_act: SysAct):
-        results = self._query_db(beliefstate)
-        total_credits = beliefstate.get_high_level_inform_value("total_credits")
+        total_credits = beliefstate.get_high_level_inform_value(self.domain.total_credits)
         total_credits = int(total_credits)
-        solution = self.course_picker.select_courses(results, total_credits)
-        for course in solution:
-            sys_act.add_value('courses', course)
-        sys_act.add_value('total_credits', total_credits)
+        self.course_picker.update_total_credits(total_credits)
+        sys_act.add_value(self.domain.total_credits, total_credits)
 
+
+    def _process_user_schedules(self, beliefstate: BeliefState, sys_act: SysAct):
+        # add all schedules to user_schedules
+        high_lvl_name = self.domain.user_schedules
+        slot_name = self.domain.slot_map[high_lvl_name]
+        for schedule in beliefstate.get_high_level_inform_sub_results(self.domain.user_schedules):
+            sys_act.add_value(high_lvl_name, schedule[slot_name])
+        self.course_picker.update_user_schedules(sys_act.get_values(high_lvl_name))
+    
 
     def _get_open_slot(self, beliefstate: BeliefState):
         # TODO

@@ -482,6 +482,7 @@ class HandcraftedNLU(Service):
         else:
             print('No language')
 
+
 class TellerNLU(HandcraftedNLU):
 
     def __init__(self, domain: JSONLookupDomain, logger):
@@ -553,6 +554,9 @@ class TellerNLU(HandcraftedNLU):
         if len(self.user_acts) == 0 and self.sys_act_info["last_act"] is not None:
             self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
+
+        self.logger.info("here's user acts")
+        print(self.user_acts)
         return {'user_acts': self.user_acts}
 
     
@@ -576,10 +580,3 @@ class TellerNLU(HandcraftedNLU):
         self.logger.info(f"receive sys state, {sys_state}")
         if "last_act" in sys_state:
             self.sys_act_info["last_act"] = sys_state["last_act"]
-
-    
-    
-
-    
-
-        

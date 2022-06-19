@@ -222,11 +222,13 @@ class TellerDomain(JSONLookupDomain):
         """ Load local db to memory
         """
         super().__init__(name, json_ontology_file, sqllite_db_file, display_name)
+        # TODO: add these to avoid typos in other functions
+        self.total_credits = "total_credits"
+        self.user_schedules = "user_schedules"
         self.slot_map = {
-            "total_credits": "Credit"
+            self.total_credits: "Credit",
+            self.user_schedules: "Dates"
         }
-
-
 
     def high_level_slots(self):
         """ Return the name of high-level slots. 
@@ -234,7 +236,8 @@ class TellerDomain(JSONLookupDomain):
         but is related to the ultimate task.
         e.g. the total credit a user need
         """
-        return ["total_credits"]
+        # TODO: store the key list somewhere else
+        return list(self.slot_map.keys())
 
     
     def break_down_informs(self, slot_name, value):
@@ -242,18 +245,24 @@ class TellerDomain(JSONLookupDomain):
         """
         #TODO: extend it to other fields
         slot_value_pairs = []
-        if slot_name == "total_credits":
+        if slot_name not in self.slot_map:
+            assert False and "not impl"
+        sub_slot = self.slot_map[slot_name]
+        
+        if slot_name == self.total_credits:
             value = int(value)
             assert value % 3 == 0 and value != 0
-            sub_slot = self.slot_map[slot_name]
+            
             possible_values = self.get_possible_values(sub_slot)
             for v in possible_values:
                 if int(v) > value:
                     continue
                 sv = {sub_slot:v}
                 slot_value_pairs.append(sv)
-        else:
-            assert False and "not impl"
+
+        elif slot_name == self.user_schedules:
+            # TODO: extract the date and time
+            slot_value_pairs.append({sub_slot: value})
 
         return slot_value_pairs
 
