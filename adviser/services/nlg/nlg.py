@@ -199,3 +199,9 @@ class TellerNLG(HandcraftedNLG):
     def __process_request(self, sys_act: SysAct = None):
         if "total_credits" in sys_act.slot_values:
             return "How many credits would you like to earn?"
+        elif "user_schedules" in sys_act.slot_values:
+            return "What are your regular personal schedules?"
+        else:
+            self.logger.info("hey, i don't understand what u mean")
+            print(sys_act)
+            exit(0)
