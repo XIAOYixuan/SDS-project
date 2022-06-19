@@ -817,6 +817,15 @@ class TellerPolicy(HandcraftedPolicy):
                     "last_act": sys_act, 
                     "lastRequestSlot": list(sys_act.slot_values.keys())}
                 return sys_act, sys_state
+            elif not self._input_validation(slot, value):
+                sys_act = SysAct(SysActionType.Request)
+                sys_act.add_value('error', slot)
+
+                sys_state = {
+                    "last_act": sys_act,
+                    "lastRequestSlot": [slot]
+                }
+                return sys_act, sys_state
 
         sys_act = SysAct()
         sys_act.type = SysActionType.InformByName
@@ -833,6 +842,15 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act.add_value('courses', course)
 
         return sys_act, {"last_act": sys_act}
+
+
+    def _input_validation(self, slot, value):
+        if slot == self.domain.total_credits:
+            value = int(value)
+            return value % 3 == 0 and value > 0
+        else:
+            #TODO
+            return True 
     
     
     def _query_db(self, beliefstate: BeliefState):

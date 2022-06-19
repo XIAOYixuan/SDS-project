@@ -251,7 +251,6 @@ class TellerDomain(JSONLookupDomain):
         
         if slot_name == self.total_credits:
             value = int(value)
-            assert value % 3 == 0 and value != 0
             
             possible_values = self.get_possible_values(sub_slot)
             for v in possible_values:
