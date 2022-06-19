@@ -572,13 +572,16 @@ class TellerCoursePicker:
     """ This class carries all the functions to select the courses
     """
     def __init__(self) -> None:
+        self.clear()
+        self.day2min = self._build_day2min_mapper()
+
+    def clear(self):
         self.total_credits = 100
         self.candidates = []
         self.solution = []
         # store the start minute and the end minute of the event
         # TODO: binary search to speedup
         self.time_slots = []
-        self.day2min = self._build_day2min_mapper()
         self.user_schedules = []
 
     
@@ -741,6 +744,7 @@ class TellerPolicy(HandcraftedPolicy):
         self.first_turn = True
         self.current_suggestions = []
         self.s_index = 0
+        self.course_picker.clear()
         self.logger.info("hi, policy starts!")
 
 
@@ -829,6 +833,7 @@ class TellerPolicy(HandcraftedPolicy):
 
         sys_act = SysAct()
         sys_act.type = SysActionType.InformByName
+        self.course_picker.clear()
         candidates = self._query_db(beliefstate)
         for slot in slots:
             # TODO: func dictionary
