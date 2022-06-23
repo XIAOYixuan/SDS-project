@@ -4,5 +4,9 @@
     },
     "user_schedules": {
         "true": "(\\b|^| )(fri\\. 9:00\\-11:00)(\\b|$| )"
+    },
+    "fields": {
+        "applied_nlp": "^(?=.*((applied )?(\\bnlp\\b|natural language processing)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "speech": "(\\\\b|^| )(what about|want|have|need|looking for|used for)( a(n)?)* (\\bspeech\\b)|(\\bspeech\\b)( ((would|seems to) be (good|nice)($|[^\\?]$)|seems (good|nice)($|[^\\?]$)))|( |^)(\\bspeech\\b)( (please|and))*"
     }
 }
