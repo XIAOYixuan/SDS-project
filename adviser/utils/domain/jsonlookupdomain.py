@@ -225,9 +225,11 @@ class TellerDomain(JSONLookupDomain):
         # TODO: add these to avoid typos in other functions
         self.total_credits = "total_credits"
         self.user_schedules = "user_schedules"
+        self.fields = "fields"
         self.slot_map = {
             self.total_credits: "Credit",
-            self.user_schedules: "Dates"
+            self.user_schedules: "Dates",
+            self.fields: "Field"
         }
 
     def high_level_slots(self):
@@ -240,7 +242,7 @@ class TellerDomain(JSONLookupDomain):
         return list(self.slot_map.keys())
 
     
-    def break_down_informs(self, slot_name, value):
+    def break_down_informs(self, slot_name, value, regex_value):
         """ break down high level informs to smaller one
         """
         #TODO: extend it to other fields
@@ -260,8 +262,11 @@ class TellerDomain(JSONLookupDomain):
                 slot_value_pairs.append(sv)
 
         elif slot_name == self.user_schedules:
-            # TODO: extract the date and time
             slot_value_pairs.append({sub_slot: value})
+
+        elif slot_name == self.fields :
+            # TODO: extract the date and time
+            slot_value_pairs.append({sub_slot: regex_value})
 
         return slot_value_pairs
 
