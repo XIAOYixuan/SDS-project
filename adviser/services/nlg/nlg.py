@@ -174,7 +174,7 @@ class TellerNLG(HandcraftedNLG):
         elif sys_act.type == SysActionType.Welcome:
             return "Welcome!"
         elif sys_act.type == SysActionType.Request:
-            return self.__process_request(sys_act)
+            return self._process_request(sys_act)
         elif sys_act.type == SysActionType.InformByName:
             # need to change the sys act...
             courses = sys_act.get_values('courses')
@@ -196,12 +196,21 @@ class TellerNLG(HandcraftedNLG):
             return "Sorry, I don't understand!"
 
 
-    def __process_request(self, sys_act: SysAct = None):
+    def _process_request(self, sys_act: SysAct = None):
         if "total_credits" in sys_act.slot_values:
             return "How many credits would you like to earn?"
         elif "user_schedules" in sys_act.slot_values:
             return "What are your regular personal schedules?"
+        elif "error" in sys_act.slot_values:
+            slot_values = sys_act.get_values("error")
+            self.logger.info(f"error: {slot_values}")
+            return self._get_input_format(slot_values[0])
         else:
             self.logger.info("hey, i don't understand what u mean")
             print(sys_act)
             exit(0)
+
+
+    def _get_input_format(self, slot):
+        if slot == self.domain.total_credits:
+            return "The total credit should be greater than 0 and a multiple of 3. Could you re-enter the value?"
