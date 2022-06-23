@@ -169,6 +169,7 @@ class TellerNLG(HandcraftedNLG):
 
     
     def generate_system_utterance(self, sys_act: SysAct = None) -> str:
+        self.logger.info(f"sys act is {sys_act}")
         if sys_act.type == SysActionType.Bye:
             return "Glad to talk with you, bye!" 
         elif sys_act.type == SysActionType.Welcome:

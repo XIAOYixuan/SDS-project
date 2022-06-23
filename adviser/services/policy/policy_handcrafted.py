@@ -737,6 +737,7 @@ class TellerPolicy(HandcraftedPolicy):
         self.s_index = 0
         self.course_picker = TellerCoursePicker()
 
+
     def dialog_start(self):
         """ TODO: Reset the policy after each dialog
         """
@@ -841,10 +842,17 @@ class TellerPolicy(HandcraftedPolicy):
                 self._process_total_credits(beliefstate, sys_act)
             elif slot == self.domain.user_schedules:
                 self._process_user_schedules(beliefstate, sys_act)
+            elif slot == self.domain.fields:
+                self._process_field_preference(beliefstate, sys_act)
+            else:
+                raise NotImplementedError(f"unknown slot {slot}")
         
         solution = self.course_picker.select_courses(candidates)
         for course in solution:
             sys_act.add_value('courses', course)
+
+        if len(solution) == 0:
+            raise NotImplementedError("no solution, should set sys act to Bad or Inform?")
 
         return sys_act, {"last_act": sys_act}
 
@@ -887,12 +895,21 @@ class TellerPolicy(HandcraftedPolicy):
 
     def _process_user_schedules(self, beliefstate: BeliefState, sys_act: SysAct):
         # add all schedules to user_schedules
-        high_lvl_name = self.domain.user_schedules
-        slot_name = self.domain.slot_map[high_lvl_name]
-        for schedule in beliefstate.get_high_level_inform_sub_results(self.domain.user_schedules):
-            sys_act.add_value(high_lvl_name, schedule[slot_name])
-        self.course_picker.update_user_schedules(sys_act.get_values(high_lvl_name))
+        high_lvl_slot = self.domain.user_schedules
+        self._add_batch_values(beliefstate, high_lvl_slot, sys_act)
+        self.course_picker.update_user_schedules(sys_act.get_values(high_lvl_slot))
     
+
+    def _process_field_preference(self, beliefstate: BeliefState, sys_act: SysAct):
+        self._add_batch_values(beliefstate, self.domain.fields, sys_act)
+        self.logger.info("get fields, not do nothing to course picker")
+
+
+    def _add_batch_values(self, beliefstate, high_lvl_slot, sys_act):
+        slot_name = self.domain.slot_map[high_lvl_slot]
+        for key_val in beliefstate.get_high_level_inform_sub_results(high_lvl_slot):
+            sys_act.add_value(high_lvl_slot, key_val[slot_name])
+
 
     def _get_open_slot(self, beliefstate: BeliefState):
         # TODO
