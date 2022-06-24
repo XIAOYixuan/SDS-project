@@ -226,10 +226,12 @@ class TellerDomain(JSONLookupDomain):
         self.total_credits = "total_credits"
         self.user_schedules = "user_schedules"
         self.fields = "fields"
+        self.formats = "formats"
         self.slot_map = {
             self.total_credits: "Credit",
             self.user_schedules: "Dates",
-            self.fields: "Field"
+            self.fields: "Field",
+            self.formats: "Format"
         }
 
     def high_level_slots(self):
@@ -264,7 +266,7 @@ class TellerDomain(JSONLookupDomain):
         elif slot_name == self.user_schedules:
             slot_value_pairs.append({sub_slot: value})
 
-        elif slot_name == self.fields :
+        elif slot_name == self.fields or slot_name == self.formats:
             # TODO: extract the date and time
             slot_value_pairs.append({sub_slot: regex_value})
 
