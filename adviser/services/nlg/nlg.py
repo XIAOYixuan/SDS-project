@@ -202,14 +202,16 @@ class TellerNLG(HandcraftedNLG):
             return "How many credits would you like to earn?"
         elif "user_schedules" in sys_act.slot_values:
             return "What are your regular personal schedules?"
+        elif "fields" in sys_act.slot_values:
+            return "What field do you prefer? (e.g., NLP, speech)"
+        elif "formats" in sys_act.slot_values:
+            return "Which lecture format do you prefer, lecture, project or seminar?"
         elif "error" in sys_act.slot_values:
             slot_values = sys_act.get_values("error")
             self.logger.info(f"error: {slot_values}")
             return self._get_input_format(slot_values[0])
         else:
-            self.logger.info("hey, i don't understand what u mean")
-            print(sys_act)
-            exit(0)
+            raise NotImplementedError(f"sys_act be like {sys_act}")
 
 
     def _get_input_format(self, slot):
