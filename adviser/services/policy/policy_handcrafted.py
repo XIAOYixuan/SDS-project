@@ -844,6 +844,8 @@ class TellerPolicy(HandcraftedPolicy):
                 self._process_user_schedules(beliefstate, sys_act)
             elif slot == self.domain.fields:
                 self._process_field_preference(beliefstate, sys_act)
+            elif slot == self.domain.formats:
+                self._process_format_preference(beliefstate, sys_act)
             else:
                 raise NotImplementedError(f"unknown slot {slot}")
         
@@ -901,6 +903,10 @@ class TellerPolicy(HandcraftedPolicy):
     
 
     def _process_field_preference(self, beliefstate: BeliefState, sys_act: SysAct):
+        self._add_batch_values(beliefstate, self.domain.fields, sys_act)
+        self.logger.info("get fields, not do nothing to course picker")
+    
+    def _process_format_preference(self, beliefstate: BeliefState, sys_act: SysAct):
         self._add_batch_values(beliefstate, self.domain.fields, sys_act)
         self.logger.info("get fields, not do nothing to course picker")
 
