@@ -22,10 +22,10 @@
             "Wed. 9:45-11:15"
         ],
         "Field": [
-            "Linguistics; programming",
-            "NLP; Linguistics",
-            "NLP; Speech",
-            "NLP; Speech,programming"
+            "linguistics",
+            "nlp",
+            "speech",
+            "programming"
         ],
         "Format": [
             "lecture",
