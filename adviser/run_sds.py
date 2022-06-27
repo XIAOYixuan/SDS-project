@@ -47,19 +47,28 @@ def load_nlg(backchannel: bool, domain = None, logger=None):
         nlg = HandcraftedNLG(domain=domain, logger=logger)
     return nlg
 
+# TODO: remove this
+use_lecture = False
 def load_domain(backchannel: bool = False, logger = None):
-    from utils.domain.jsonlookupdomain import JSONLookupDomain
+    from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
     from services.nlu.nlu import TellerNLU, HandcraftedNLU
-    from services.nlg.nlg import HandcraftedNLG
-    from services.policy import HandcraftedPolicy
-    domain = JSONLookupDomain('ImsLecturers', display_name="Lecturers")
-    # nlu = TellerNLU(domain=domain, logger=logger)
-    nlu = HandcraftedNLU(domain=domain, logger=logger)
-    bst = HandcraftedBST(domain=domain, logger=logger)
-    policy = HandcraftedPolicy(domain=domain, logger=logger)
-    nlg = load_nlg(backchannel=backchannel, domain=domain, logger=logger)
+    from services.nlg.nlg import TellerNLG, HandcraftedNLG
+    from services.policy import TellerPolicy, HandcraftedPolicy
+    from services.bst.bst import TellerBST
+    # use_teller = False 
+    if not use_lecture:
+        domain = TellerDomain(name='Courses', json_ontology_file="resources/teller/Courses.json", sqllite_db_file="resources/teller/Courses.db", display_name="Courses")
+        nlu = TellerNLU(domain=domain, logger=logger)
+        bst = TellerBST(domain=domain, logger=logger)
+        policy = TellerPolicy(domain=domain, logger=logger)
+        nlg = TellerNLG(domain=domain, logger=logger)
+    else:
+        domain = JSONLookupDomain('ImsCourses', display_name="courses")
+        nlu = HandcraftedNLU(domain=domain, logger=logger)
+        bst = HandcraftedBST(domain=domain, logger=logger)
+        policy = HandcraftedPolicy(domain=domain, logger=logger)
+        nlg = load_nlg(backchannel=backchannel, domain=domain, logger=logger)
     return domain, [nlu, bst, policy, nlg]
-    # return domain, [nlu]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ADVISER 2.0 Dialog System')
@@ -71,10 +80,13 @@ if __name__ == "__main__":
                         default="results",
                         help="specify console log level")
     parser.add_argument('--cuda', action='store_true', help="enable cuda (currently only for asr/tts)")
+    parser.add_argument('--use_lecture', action="store_true") 
     parser.add_argument('--privacy', action='store_true',
                         help="enable random mutations of the recorded voice to mask speaker identity", default=False)
     
     args = parser.parse_args()
+    if args.use_lecture:
+        use_lecture = True
 
     domains = []
     services = []

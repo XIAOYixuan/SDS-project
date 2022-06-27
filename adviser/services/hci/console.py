@@ -128,6 +128,7 @@ class ConsoleOutput(Service):
         Raises:
             ValueError: if there is no system utterance to print
         """
+        print("ConsoleOutput recieve sys utterance")
         if sys_utterance is not None and sys_utterance != "":
             print("System: {}".format(sys_utterance))
         else:

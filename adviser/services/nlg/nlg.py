@@ -28,7 +28,7 @@ from services.service import Service
 from utils.common import Language
 from utils.domain.domain import Domain
 from utils.logger import DiasysLogger
-from utils.sysact import SysAct
+from utils.sysact import SysAct, SysActionType
 from typing import Dict
 
 
@@ -156,3 +156,64 @@ class HandcraftedNLG(Service):
             return f"{name}'"
         else:
             return f"{name}s"
+
+
+class TellerNLG(HandcraftedNLG):
+
+    def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {},
+                logger = None, template_file_german= None,
+                language: Language = None):
+        Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
+
+        self.logger = logger
+
+    
+    def generate_system_utterance(self, sys_act: SysAct = None) -> str:
+        self.logger.info(f"sys act is {sys_act}")
+        if sys_act.type == SysActionType.Bye:
+            return "Glad to talk with you, bye!" 
+        elif sys_act.type == SysActionType.Welcome:
+            return "Welcome!"
+        elif sys_act.type == SysActionType.Request:
+            return self._process_request(sys_act)
+        elif sys_act.type == SysActionType.InformByName:
+            # need to change the sys act...
+            courses = sys_act.get_values('courses')
+
+            if len(courses) == 0:
+                return "Sorry, looks like you have an ambitious plan! Could you try again with less credits?" 
+            ret = f"To get {sys_act.get_values('total_credits')[0]} credits, you may choose the following course"
+            courses = sys_act.get_values('courses')
+            if len(courses) > 1:
+                ret += "s"
+            ret += ": "
+            ret += ",".join(courses)
+            ret += "."
+            return ret
+        elif sys_act.type == SysActionType.RequestMore:
+            return "You're welcome. What else can I do for you?"
+        else:
+            self.logger.info(f"let's check the type {sys_act.type}")
+            return "Sorry, I don't understand!"
+
+
+    def _process_request(self, sys_act: SysAct = None):
+        if "total_credits" in sys_act.slot_values:
+            return "How many credits would you like to earn?"
+        elif "user_schedules" in sys_act.slot_values:
+            return "What are your regular personal schedules?"
+        elif "fields" in sys_act.slot_values:
+            return "What field do you prefer? (e.g., NLP, speech)"
+        elif "formats" in sys_act.slot_values:
+            return "Which lecture format do you prefer, lecture, project or seminar?"
+        elif "error" in sys_act.slot_values:
+            slot_values = sys_act.get_values("error")
+            self.logger.info(f"error: {slot_values}")
+            return self._get_input_format(slot_values[0])
+        else:
+            raise NotImplementedError(f"sys_act be like {sys_act}")
+
+
+    def _get_input_format(self, slot):
+        if slot == self.domain.total_credits:
+            return "The total credit should be greater than 0 and a multiple of 3. Could you re-enter the value?"

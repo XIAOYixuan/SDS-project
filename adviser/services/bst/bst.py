@@ -53,18 +53,18 @@ class HandcraftedBST(Service):
         """
         # save last turn to memory
         self.bs.start_new_turn()
-        self.logger.info("updating bst")
+        self.logger.info("updating bst, before")
+        print(self.bs)
         if user_acts:
             self._reset_informs(user_acts)
             self._reset_requests()
             self.bs["user_acts"] = self._get_all_usr_action_types(user_acts)
-
             self._handle_user_acts(user_acts)
-
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
-        self.logger.info(f"finish update, belif stack in {self.bs}")
+        self.logger.info(f"finish update, belif stack is ")
+        print(self.bs)
         return {'beliefstate': self.bs}
 
     def dialog_start(self):
@@ -150,3 +150,61 @@ class HandcraftedBST(Service):
                 # This way it is clear that the user is no longer asking about that one item
                 if self.domain.get_primary_key() in self.bs['informs']:
                     del self.bs['informs'][self.domain.get_primary_key()]
+
+
+class TellerBST(HandcraftedBST):
+
+    def __init__(self, domain=None, logger=None):
+        Service.__init__(self, domain=domain)
+        self.logger = logger
+        self.logger.info(f"My domain is {domain}")
+        self.bs = BeliefState(domain)
+
+
+    @PublishSubscribe(sub_topics=["user_acts"], pub_topics=["beliefstate"]) 
+    def update_bst(self, user_acts: List[UserAct] = None):
+        """
+        Return a dict of belief state
+        TODO: maybe use the super()'s impl?
+        """
+        # save last turn to memory
+        self.bs.start_new_turn()
+        
+        if user_acts:
+            self.bs['user_acts'] = self._get_all_usr_action_types(user_acts)
+            self._handle_user_acts(user_acts)
+            num_entries, discriminable = self.bs.get_num_dbmatches()
+            self.bs["num_matches"] = num_entries
+            self.bs["discriminable"] = discriminable
+        self.logger.info(f"update beliefstate")
+        print(self.bs)
+        return {'beliefstate': self.bs}
+
+
+    def _handle_user_acts(self, user_acts: List[UserAct]):
+        high_dict = self.bs["high_level_informs"]
+        for act in user_acts:
+            if act.type == UserActionType.Inform and \
+                act.slot in self.domain.high_level_slots():
+
+                self._handle_high_level_user_acts(act, high_dict)
+        self.bs["high_level_informs"] = high_dict
+
+    
+    def _handle_high_level_user_acts(self, act: UserAct, high_dict: dict):
+        if act.value == "dontcare":
+            high_dict[act.slot] = (act.text, [])
+        else:
+            new_slot_values = self.domain.break_down_informs(act.slot, act.text, act.value)
+            if act.slot in high_dict:
+                high_dict[act.slot][-1].extend(new_slot_values)
+            else:
+                high_dict[act.slot] = (act.text, new_slot_values)
+
+    
+    def dialog_start(self):
+        """ The original comment says it returns the belief state
+        for a new dialog, we do nothing atm
+        """
+        self.logger.info("hey, bst starts working")
+        self.bs = BeliefState(self.domain)

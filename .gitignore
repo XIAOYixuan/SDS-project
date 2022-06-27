@@ -1,3 +1,9 @@
+# installation config
+mkdocs.yml
+
+# debug
+*.png
+
 # vs code ignores
 .vscode
 tmp

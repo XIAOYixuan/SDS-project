@@ -215,3 +215,73 @@ class JSONLookupDomain(Domain):
     def get_keyword(self):
         if "keyword" in self.ontology_json:
             return self.ontology_json['keyword']
+
+class TellerDomain(JSONLookupDomain):
+
+    def __init__(self, name, json_ontology_file, sqllite_db_file, display_name):
+        """ Load local db to memory
+        """
+        super().__init__(name, json_ontology_file, sqllite_db_file, display_name)
+        # TODO: add these to avoid typos in other functions
+        self.total_credits = "total_credits"
+        self.user_schedules = "user_schedules"
+        self.fields = "fields"
+        self.formats = "formats"
+        self.slot_map = {
+            self.total_credits: "Credit",
+            self.user_schedules: "Dates",
+            self.fields: "Field",
+            self.formats: "Format"
+        }
+
+    def high_level_slots(self):
+        """ Return the name of high-level slots. 
+        A high-level slot cannot be directly found in the db attr list,
+        but is related to the ultimate task.
+        e.g. the total credit a user need
+        """
+        # TODO: store the key list somewhere else
+        return list(self.slot_map.keys())
+
+    
+    def break_down_informs(self, slot_name, value, regex_value):
+        """ break down high level informs to smaller one
+        """
+        #TODO: extend it to other fields
+        slot_value_pairs = []
+        if slot_name not in self.slot_map:
+            assert False and "not impl"
+        sub_slot = self.slot_map[slot_name]
+        
+        if slot_name == self.total_credits:
+            value = int(value)
+            
+            possible_values = self.get_possible_values(sub_slot)
+            for v in possible_values:
+                if int(v) > value:
+                    continue
+                sv = {sub_slot:v}
+                slot_value_pairs.append(sv)
+
+        elif slot_name == self.user_schedules:
+            slot_value_pairs.append({sub_slot: value})
+
+        elif slot_name == self.fields or slot_name == self.formats:
+            # TODO: extract the date and time
+            slot_value_pairs.append({sub_slot: regex_value})
+
+        return slot_value_pairs
+
+
+    def uniq_list(self, results):
+        """unique the list using the primary key
+        """
+        uniq_dict = {}
+        pkey = self.get_primary_key()
+        for item in results:
+            uniq_dict[item[pkey]] = item
+        results = []
+        for key in uniq_dict:
+            results.append(uniq_dict[key])
+        return results
+

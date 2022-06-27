@@ -85,6 +85,27 @@ class BeliefState:
     def __str__(self):
         return self._recursive_repr(self._history[-1])
 
+
+    def _high_level_key_exist(self, key):
+        return key in self._history[-1]["high_level_informs"]
+
+
+    def get_high_level_inform_value(self, key):
+        if not self._high_level_key_exist(key):
+            return None
+        return self._history[-1]["high_level_informs"][key][0]
+    
+
+    def get_high_level_inform_sub_results(self, key):
+        if not self._high_level_key_exist(key):
+            return []
+        return self._history[-1]["high_level_informs"][key][1]
+
+
+    def has_high_level_key(self, key):
+        return key in self._history[-1]["high_level_informs"]
+
+
     def start_new_turn(self):
         """
         ONLY to be called by the belief state tracker at the begin of each turn,
@@ -103,9 +124,12 @@ class BeliefState:
 
         """
 
+        # a high level inform can be further decomposed into small informs
+        # e.g., "total_credits": [("credits", [3, 6, 9])]
         # TODO: revist when we include probabilites, sets should become dictionaries
         belief_state = {"user_acts": set(),
                         "informs": {},
+                        "high_level_informs": {},
                         "requests": {},
                         "num_matches": 0,
                         "discriminable": True}

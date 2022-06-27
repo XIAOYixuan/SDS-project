@@ -1,0 +1,19 @@
+{
+    "total_credits": {
+        "true": "(\\b|^| )(^[-+]?[0-9]+$)(\\b|$| )"
+    },
+    "user_schedules": {
+        "true": "(\\b|^| )(fri\\. 9:00\\-11:00)(\\b|$| )"
+    },
+    "fields": {
+        "nlp": "^(?=.*((applied )?(\\bnlp\\b|natural language processing)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$"
+    }, 
+    "formats": {
+        "lecture": "^(?=.*(lecture))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "project": "^(?=.*(project))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "seminar": "^(?=.*(seminar))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$"
+    }
+}
