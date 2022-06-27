@@ -1,9 +1,18 @@
 {
     "total_credits": {
-        "true": "(\\b|^| )(^[-+]?[0-9]+$)(\\b|$| )"
+        "true":  "(\\b|^| )(I (want|need|am looking for) a(\\b|^| )([1-9]|[1-9][0-9]|100)(\\b|$| )(credit course))"
+    },
+    "ects": {
+        "3,6,9": "(\\b|^| )(I (want|need|am looking for) a(\\b|^| )(3|three|6|six|9|nine)(\\b|$| )(sws))"
+    },
+    "creditorects":{
+        "only": "ect(s)?|credit(s| point)?"
+
     },
     "user_schedules": {
-        "true": "(\\b|^| )(fri\\. 9:00\\-11:00)(\\b|$| )"
+        "true": "(\\b|^| )(fri\\. 9:00\\-11:00)(\\b|$| )",
+        "morning":"^(?:(sun|Sun)(?:day)?|Mon(?:day)?|Tues(?:day)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?)(?=.*(morning))",
+        "afternoon":"^(?:(sun|Sun)(?:day)?|Mon(?:day)?|Tues(?:day)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?)(?=.*(afternoon))"
     },
     "fields": {
         "nlp": "^(?=.*((applied )?(\\bnlp\\b|natural language processing)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
