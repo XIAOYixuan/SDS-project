@@ -1,13 +1,8 @@
 {
     "total_credits": {
-        "true":  "(\\b|^| )(I (want|need|am looking for) a(\\b|^| )([1-9]|[1-9][0-9]|100)(\\b|$| )(credit course))"
-    },
-    "ects": {
-        "3,6,9": "(\\b|^| )(I (want|need|am looking for) a(\\b|^| )(3|three|6|six|9|nine)(\\b|$| )(sws))"
-    },
-    "creditorects":{
-        "only": "ect(s)?|credit(s| point)?"
-
+        "credits":  "(I(('m)| am)? (want (to have)?|need|would like|looking for))?([1-9][0-9]?) (credit(s)?)?",
+        "ects": "(I(('m)| am)? (want (to have)?|need|would like|looking for))?([1-9][0-9]?) (ect(s)?)?",
+        "sws": "(I(('m)| am)? (want (to have)?|need|would like|looking for))?([1-9][0-9]?) (sws)?"
     },
     "user_schedules": {
         "true": "(\\b|^| )(fri\\. 9:00\\-11:00)(\\b|$| )",
