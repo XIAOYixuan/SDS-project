@@ -667,6 +667,42 @@ class TellerCoursePicker:
         return set(ret)
 
 
+    def _select_one_solution(self, candidates, field_candidates, format_candidates):
+        # stage 1: select the courses that meet both requirements, half total credits
+        inter_set = list(field_candidates&format_candidates)
+        inter_credits, inter_set_solution = self._search_for_preference(inter_set, candidates, max(3, int(0.5 * self.total_credits)))
+        print("inter_set results", inter_credits, inter_set_solution)
+        
+        # stage 2: select the course that meet either requirements, half total credits
+        union_set = (field_candidates| format_candidates) - inter_set_solution
+        union_credits, union_set_solution = self._search_for_preference(union_set, candidates, max(0, self.total_credits - inter_credits))
+        print("union results", union_credits, union_set_solution)
+
+
+        # stage 3: 
+        remain_credits = self.total_credits - inter_credits - union_credits
+        
+        if remain_credits == 0:
+            self.solution = list(inter_set_solution) + list(union_set_solution)
+            return self.solution
+        
+        self.solution = []
+        self.stack = []
+        self.candidates = []
+        for course in candidates:
+            course_name = course["Name"]
+            if course_name in inter_set_solution or course_name in union_set_solution:
+                continue
+            self.candidates.append(course)
+        
+        status = self._brute_force_meet_total_credits(0, 0, remain_credits)
+        if status:
+            self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
+        else:
+            self.solution = []
+        return self.solution
+
+    
     def select_courses(self, candidates):
         self.candidates = candidates
         
@@ -688,38 +724,18 @@ class TellerCoursePicker:
         print(type(format_candidates), format_candidates)
         print(format_candidates&field_candidates)
         print('-------------------------------------------------------------------')
-        # stage 1: select the courses that meet both requirements, half total credits
-        inter_set = list(field_candidates&format_candidates)
-        inter_credits, inter_set_solution = self._search_for_preference(inter_set, candidates, max(3, int(0.5 * self.total_credits)))
-        print("inter_set results", inter_credits, inter_set_solution)
 
-        # stage 2: select the course that meet either requirements, half total credits
-        union_set = (field_candidates| format_candidates) - inter_set_solution
-        union_credits, union_set_solution = self._search_for_preference(union_set, candidates, max(0, self.total_credits - inter_credits))
-        print("union results", union_credits, union_set_solution)
-
-        # stage 3: 
-        remain_credits = self.total_credits - inter_credits - union_credits
+        different_solutions = []
+        for t in range(3):
+            # 3 trials
+            solution = self._select_one_solution(candidates, field_candidates, format_candidates)
+            different_solutions.append(solution)
         
-        if remain_credits == 0:
-            self.solution = list(inter_set_solution) + list(union_set_solution)
-            return self.solution
-
-        self.solution = []
-        self.stack = []
-        self.candidates = []
-        for course in candidates:
-            course_name = course["Name"]
-            if course_name in inter_set_solution or course_name in union_set_solution:
-                continue
-            self.candidates.append(course)
+        # unique_solutions
+        for sol in different_solutions:
+            print(sol)
         
-        status = self._brute_force_meet_total_credits(0, 0, remain_credits)
-        if status:
-            self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
-        else:
-            self.solution = []
-        return self.solution
+        return different_solutions[0]
 
 
     def _remove_user_conflicts(self):
