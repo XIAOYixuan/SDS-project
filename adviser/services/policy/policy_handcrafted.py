@@ -638,6 +638,9 @@ class TellerCoursePicker:
 
 
     def _search_for_preference(self, names, candidates, target_credits):
+        # if the user doesn't provide her preferences, don't do search_for_preference
+        if len(names) == 0:
+            return 0, set() 
         # filter by name
         new_candidates = [course for course in candidates if course["Name"] in names]
         candidates = new_candidates
@@ -645,8 +648,7 @@ class TellerCoursePicker:
             # can be handled easily by brute-force search
             # the following func find a combination with the max score
             # (but <= meet_credits)
-            solution = self._brute_force_find_max(candidates, target_credits)
-            return solution
+            return self._brute_force_find_max(candidates, target_credits)
 
         else:
             # use a random and greedy algorithm
@@ -656,7 +658,7 @@ class TellerCoursePicker:
     def _fake_query(self, slot, targets):
         # TODO: should query db!
         if len(targets) == 0:
-            return set([course["Name"] for course in self.candidates])
+            return set()
 
         ret = []
         for course in self.candidates:
@@ -694,7 +696,7 @@ class TellerCoursePicker:
             if course_name in inter_set_solution or course_name in union_set_solution:
                 continue
             self.candidates.append(course)
-        
+        # print(f'start brute force, candidates{self.candidates}, remain_credits {remain_credits}') 
         status = self._brute_force_meet_total_credits(0, 0, remain_credits)
         if status:
             self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
@@ -726,8 +728,9 @@ class TellerCoursePicker:
         print('-------------------------------------------------------------------')
 
         different_solutions = []
-        for t in range(3):
+        for _ in range(3):
             # 3 trials
+            shuffle(candidates)
             solution = self._select_one_solution(candidates, field_candidates, format_candidates)
             different_solutions.append(solution)
         
@@ -834,7 +837,7 @@ class TellerCoursePicker:
         # TODO: need optimization, pruning
         # TODO: need to maintain a dependency graph, telling the module which courses are choosable
         self.stack.append(cur_id)
-        print(f"brute_forcing: {cur_id} course {self.candidates[cur_id]['Name']} credits {cur_credits}")
+        # print(f"brute_forcing: {cur_id} course {self.candidates[cur_id]['Name']} credits {cur_credits}")
         if cur_id >= len(self.candidates):
             self.stack.pop()
             return False
@@ -850,12 +853,12 @@ class TellerCoursePicker:
             # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
             self.stack.pop()
             return True
-        elif self._brute_force_meet_total_credits(new_credit, cur_id+1):
+        elif self._brute_force_meet_total_credits(new_credit, cur_id+1, total_credits):
             self.solution.append(self.candidates[cur_id]['Name'])
             # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
             self.stack.pop()
             return True
-        elif self._brute_force_meet_total_credits(cur_credits, cur_id+1):
+        elif self._brute_force_meet_total_credits(cur_credits, cur_id+1, total_credits):
             # option 2: don't choose myself
             # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
             self.stack.pop()
