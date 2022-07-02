@@ -172,29 +172,32 @@ class TellerNLG(HandcraftedNLG):
         self.logger.info(f"sys act is {sys_act}")
         if sys_act.type == SysActionType.Bye:
             return "Glad to talk with you, bye!" 
+
         elif sys_act.type == SysActionType.Welcome:
             return "Welcome!"
+
         elif sys_act.type == SysActionType.Request:
             return self._process_request(sys_act)
-        elif sys_act.type == SysActionType.InformByName:
-            # need to change the sys act...
-            courses = sys_act.get_values('courses')
 
-            if len(courses) == 0:
-                return "Sorry, looks like you have an ambitious plan! Could you try again with less credits?" 
-            ret = f"To get {sys_act.get_values('total_credits')[0]} credits, you may choose the following course"
-            courses = sys_act.get_values('courses')
-            if len(courses) > 1:
-                ret += "s"
-            ret += ": "
-            ret += ",".join(courses)
-            ret += "."
-            return ret
+        elif sys_act.type == SysActionType.InformByName:
+            return self._process_solusions(sys_act)
+
         elif sys_act.type == SysActionType.RequestMore:
             return "You're welcome. What else can I do for you?"
         else:
             self.logger.info(f"let's check the type {sys_act.type}")
             return "Sorry, I don't understand!"
+
+
+    def _process_solusions(self, sys_act: SysAct = None):
+        # need to change the sys act...
+        solutions = sys_act.get_values('courses')
+        ret = f"To get {sys_act.get_values('total_credits')[0]} credits, there are {len(solutions)} solution(s). \n"
+
+        for sol in solutions:
+            ret += f"{sol}\n" 
+        return ret
+
 
 
     def _process_request(self, sys_act: SysAct = None):

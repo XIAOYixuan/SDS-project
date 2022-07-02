@@ -735,10 +735,11 @@ class TellerCoursePicker:
             different_solutions.append(solution)
         
         # unique_solutions
-        for sol in different_solutions:
-            print(sol)
+        different_solutions = [list(x) for x in set(tuple(x) for x in different_solutions)]
         
-        return different_solutions[0]
+        if len(different_solutions) == 1 and len(different_solutions[0]) == 0:
+            return []
+        return different_solutions
 
 
     def _remove_user_conflicts(self):
@@ -991,11 +992,11 @@ class TellerPolicy(HandcraftedPolicy):
             else:
                 raise NotImplementedError(f"unknown slot {slot}")
         
-        solution = self.course_picker.select_courses(candidates)
-        for course in solution:
-            sys_act.add_value('courses', course)
+        solutions = self.course_picker.select_courses(candidates)
+        for sol in solutions:
+            sys_act.add_value('courses', sol)
 
-        if len(solution) == 0:
+        if len(solutions) == 0:
             raise NotImplementedError("no solution, should set sys act to Bad or Inform?")
 
         return sys_act, {"last_act": sys_act}
