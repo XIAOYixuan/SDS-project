@@ -582,9 +582,7 @@ class TellerCoursePicker:
         self.brute_force_start = 0
         self.candidates = []
         self.solution = []
-        # store the start minute and the end minute of the event
-        # TODO: binary search to speedup
-        self.time_slots = []
+        self.time_slots = {} # used to map name to time
         self.user_schedules = []
         self.formats = set()
         self.fields = set()
@@ -712,7 +710,11 @@ class TellerCoursePicker:
         for candidate in self.candidates:
             candidate["Dates"] = self._change_time_format(candidate)
             candidate["Credit"] = int(candidate["Credit"])
-        self.user_schedules = self._change_time_format(self.user_schedules)
+        if len(self.user_schedules) > 0:
+            self.user_schedules = self._change_time_format({
+                "Name": "User",
+                "Dates": ';'.join(self.user_schedules)
+            })
         self._remove_user_conflicts()
 
         # prepare time conflict graph
@@ -739,6 +741,10 @@ class TellerCoursePicker:
         
         if len(different_solutions) == 1 and len(different_solutions[0]) == 0:
             return []
+        
+        for sol in different_solutions:
+            for i in range(len(sol)):
+                sol[i] = (sol[i], self.time_slots[sol[i]])
         return different_solutions
 
 
@@ -786,15 +792,17 @@ class TellerCoursePicker:
     def _change_time_format(self, candidate):
         """ Change time format from Date to minutes
         """
-        if isinstance(candidate, dict):
-            dates = candidate["Dates"].split(";")
-        else:
-            dates = candidate
+        name = candidate["Name"]
+        dates = candidate["Dates"].split(";")
         time_slot_in_minutes = []
         for date in dates:
             date = date.strip().lower()
             day, duration = date.split('.')
-            min_offset = self.day2min[day.strip()]
+            day, duration = day.strip(), duration.strip()
+            if name not in self.time_slots: 
+                self.time_slots[name] = []
+            self.time_slots[name].append((day, duration))
+            min_offset = self.day2min[day]
             start_time, end_time = duration.split('-')
             start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
             time_slot_in_minutes.append((min_offset+start_time, min_offset+end_time))

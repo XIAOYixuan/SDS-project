@@ -194,10 +194,31 @@ class TellerNLG(HandcraftedNLG):
         solutions = sys_act.get_values('courses')
         ret = f"To get {sys_act.get_values('total_credits')[0]} credits, there are {len(solutions)} solution(s). \n"
 
-        for sol in solutions:
-            ret += f"{sol}\n" 
+        for sid, sol in enumerate(solutions):
+            ret += f"Solution {sid}: \n"
+            ret += self._aggregate_on_day(sol)
         return ret
 
+    def _aggregate_on_day(self, solution):
+        # TODO: make it state
+        self.days = ["mon", "tue", "wed", "thur", "fri"]
+        day_course = {}
+        for course in solution:
+            for day, dur in course[1]:
+                if day not in day_course:
+                    day_course[day] = []
+                day_course[day].append(course[0])
+
+        for key in day_course:
+            day_course[key] = list(set(day_course[key]))
+
+        ret = ''
+        for day in self.days:
+            if day not in day_course: continue
+            ret += '\t' + day.capitalize() + ".:" + ", ".join(day_course[day])
+            ret += "\n"
+        assert len(ret) != 0
+        return ret
 
 
     def _process_request(self, sys_act: SysAct = None):
