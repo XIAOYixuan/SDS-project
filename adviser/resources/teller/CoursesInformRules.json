@@ -16,8 +16,8 @@
         "programming": "^(?=.*(programming|code|coding))"
     }, 
     "formats": {
-        "lecture": "^(?=.*(lecture))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "project": "^(?=.*(project))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "seminar": "^(?=.*(seminar))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$"
+        "lecture": "^(?=.*(lecture))",
+        "project": "^(?=.*(project))",
+        "seminar": "^(?=.*(seminar))"
     }
 }
