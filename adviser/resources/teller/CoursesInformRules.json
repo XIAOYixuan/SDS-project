@@ -10,10 +10,10 @@
         "afternoon":"^(?:(sun|Sun)(?:day)?|Mon(?:day)?|Tues(?:day)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?)(?=.*(afternoon))"
     },
     "fields": {
-        "nlp": "^(?=.*((applied )?(\\bnlp\\b|natural language processing)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$"
+        "nlp": "^(?=.*(nlp|natural language processing))",
+        "speech": "^(?=.*(speech))",
+        "linguistics": "^(?=.*(linguistics))",
+        "programming": "^(?=.*(programming|code|coding))"
     }, 
     "formats": {
         "lecture": "^(?=.*(lecture))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
