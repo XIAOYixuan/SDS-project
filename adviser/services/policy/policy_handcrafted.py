@@ -582,9 +582,7 @@ class TellerCoursePicker:
         self.brute_force_start = 0
         self.candidates = []
         self.solution = []
-        # store the start minute and the end minute of the event
-        # TODO: binary search to speedup
-        self.time_slots = []
+        self.time_slots = {} # used to map name to time
         self.user_schedules = []
         self.formats = set()
         self.fields = set()
@@ -638,6 +636,9 @@ class TellerCoursePicker:
 
 
     def _search_for_preference(self, names, candidates, target_credits):
+        # if the user doesn't provide her preferences, don't do search_for_preference
+        if len(names) == 0:
+            return 0, set() 
         # filter by name
         new_candidates = [course for course in candidates if course["Name"] in names]
         candidates = new_candidates
@@ -645,8 +646,7 @@ class TellerCoursePicker:
             # can be handled easily by brute-force search
             # the following func find a combination with the max score
             # (but <= meet_credits)
-            solution = self._brute_force_find_max(candidates, target_credits)
-            return solution
+            return self._brute_force_find_max(candidates, target_credits)
 
         else:
             # use a random and greedy algorithm
@@ -656,7 +656,7 @@ class TellerCoursePicker:
     def _fake_query(self, slot, targets):
         # TODO: should query db!
         if len(targets) == 0:
-            return set([course["Name"] for course in self.candidates])
+            return set()
 
         ret = []
         for course in self.candidates:
@@ -667,6 +667,42 @@ class TellerCoursePicker:
         return set(ret)
 
 
+    def _select_one_solution(self, candidates, field_candidates, format_candidates):
+        # stage 1: select the courses that meet both requirements, half total credits
+        inter_set = list(field_candidates&format_candidates)
+        inter_credits, inter_set_solution = self._search_for_preference(inter_set, candidates, max(3, int(0.5 * self.total_credits)))
+        print("inter_set results", inter_credits, inter_set_solution)
+        
+        # stage 2: select the course that meet either requirements, half total credits
+        union_set = (field_candidates| format_candidates) - inter_set_solution
+        union_credits, union_set_solution = self._search_for_preference(union_set, candidates, max(0, self.total_credits - inter_credits))
+        print("union results", union_credits, union_set_solution)
+
+
+        # stage 3: 
+        remain_credits = self.total_credits - inter_credits - union_credits
+        
+        if remain_credits == 0:
+            self.solution = list(inter_set_solution) + list(union_set_solution)
+            return self.solution
+        
+        self.solution = []
+        self.stack = []
+        self.candidates = []
+        for course in candidates:
+            course_name = course["Name"]
+            if course_name in inter_set_solution or course_name in union_set_solution:
+                continue
+            self.candidates.append(course)
+        # print(f'start brute force, candidates{self.candidates}, remain_credits {remain_credits}') 
+        status = self._brute_force_meet_total_credits(0, 0, remain_credits)
+        if status:
+            self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
+        else:
+            self.solution = []
+        return self.solution
+
+    
     def select_courses(self, candidates):
         self.candidates = candidates
         
@@ -674,7 +710,11 @@ class TellerCoursePicker:
         for candidate in self.candidates:
             candidate["Dates"] = self._change_time_format(candidate)
             candidate["Credit"] = int(candidate["Credit"])
-        self.user_schedules = self._change_time_format(self.user_schedules)
+        if len(self.user_schedules) > 0:
+            self.user_schedules = self._change_time_format({
+                "Name": "User",
+                "Dates": ';'.join(self.user_schedules)
+            })
         self._remove_user_conflicts()
 
         # prepare time conflict graph
@@ -688,38 +728,24 @@ class TellerCoursePicker:
         print(type(format_candidates), format_candidates)
         print(format_candidates&field_candidates)
         print('-------------------------------------------------------------------')
-        # stage 1: select the courses that meet both requirements, half total credits
-        inter_set = list(field_candidates&format_candidates)
-        inter_credits, inter_set_solution = self._search_for_preference(inter_set, candidates, max(3, int(0.5 * self.total_credits)))
-        print("inter_set results", inter_credits, inter_set_solution)
 
-        # stage 2: select the course that meet either requirements, half total credits
-        union_set = (field_candidates| format_candidates) - inter_set_solution
-        union_credits, union_set_solution = self._search_for_preference(union_set, candidates, max(0, self.total_credits - inter_credits))
-        print("union results", union_credits, union_set_solution)
-
-        # stage 3: 
-        remain_credits = self.total_credits - inter_credits - union_credits
+        different_solutions = []
+        for _ in range(3):
+            # 3 trials
+            shuffle(candidates)
+            solution = self._select_one_solution(candidates, field_candidates, format_candidates)
+            different_solutions.append(solution)
         
-        if remain_credits == 0:
-            self.solution = list(inter_set_solution) + list(union_set_solution)
-            return self.solution
-
-        self.solution = []
-        self.stack = []
-        self.candidates = []
-        for course in candidates:
-            course_name = course["Name"]
-            if course_name in inter_set_solution or course_name in union_set_solution:
-                continue
-            self.candidates.append(course)
+        # unique_solutions
+        different_solutions = [list(x) for x in set(tuple(x) for x in different_solutions)]
         
-        status = self._brute_force_meet_total_credits(0, 0, remain_credits)
-        if status:
-            self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
-        else:
-            self.solution = []
-        return self.solution
+        if len(different_solutions) == 1 and len(different_solutions[0]) == 0:
+            return []
+        
+        for sol in different_solutions:
+            for i in range(len(sol)):
+                sol[i] = (sol[i], self.time_slots[sol[i]])
+        return different_solutions
 
 
     def _remove_user_conflicts(self):
@@ -766,15 +792,17 @@ class TellerCoursePicker:
     def _change_time_format(self, candidate):
         """ Change time format from Date to minutes
         """
-        if isinstance(candidate, dict):
-            dates = candidate["Dates"].split(";")
-        else:
-            dates = candidate
+        name = candidate["Name"]
+        dates = candidate["Dates"].split(";")
         time_slot_in_minutes = []
         for date in dates:
             date = date.strip().lower()
             day, duration = date.split('.')
-            min_offset = self.day2min[day.strip()]
+            day, duration = day.strip(), duration.strip()
+            if name not in self.time_slots: 
+                self.time_slots[name] = []
+            self.time_slots[name].append((day, duration))
+            min_offset = self.day2min[day]
             start_time, end_time = duration.split('-')
             start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
             time_slot_in_minutes.append((min_offset+start_time, min_offset+end_time))
@@ -818,7 +846,7 @@ class TellerCoursePicker:
         # TODO: need optimization, pruning
         # TODO: need to maintain a dependency graph, telling the module which courses are choosable
         self.stack.append(cur_id)
-        print(f"brute_forcing: {cur_id} course {self.candidates[cur_id]['Name']} credits {cur_credits}")
+        # print(f"brute_forcing: {cur_id} course {self.candidates[cur_id]['Name']} credits {cur_credits}")
         if cur_id >= len(self.candidates):
             self.stack.pop()
             return False
@@ -834,12 +862,12 @@ class TellerCoursePicker:
             # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
             self.stack.pop()
             return True
-        elif self._brute_force_meet_total_credits(new_credit, cur_id+1):
+        elif self._brute_force_meet_total_credits(new_credit, cur_id+1, total_credits):
             self.solution.append(self.candidates[cur_id]['Name'])
             # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
             self.stack.pop()
             return True
-        elif self._brute_force_meet_total_credits(cur_credits, cur_id+1):
+        elif self._brute_force_meet_total_credits(cur_credits, cur_id+1, total_credits):
             # option 2: don't choose myself
             # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
             self.stack.pop()
@@ -972,11 +1000,11 @@ class TellerPolicy(HandcraftedPolicy):
             else:
                 raise NotImplementedError(f"unknown slot {slot}")
         
-        solution = self.course_picker.select_courses(candidates)
-        for course in solution:
-            sys_act.add_value('courses', course)
+        solutions = self.course_picker.select_courses(candidates)
+        for sol in solutions:
+            sys_act.add_value('courses', sol)
 
-        if len(solution) == 0:
+        if len(solutions) == 0:
             raise NotImplementedError("no solution, should set sys act to Bad or Inform?")
 
         return sys_act, {"last_act": sys_act}
