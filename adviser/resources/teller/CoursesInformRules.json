@@ -1,14 +1,22 @@
 {
     "total_credits": {
-        "true_credits":  "^(?=.*(credits|ects)?)(?=.*[0-9]|three|six|nine)(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "true_credits": "^(?=.*(credits|ects)?)(?=.*[0-9]|three|six|nine)(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
         "false_credits": "^(?=.*(credits|ects)?)(?=.*(^-|0| )).*$",
         "negated_credits": "^(?=.*(credits|ects))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
         "approx_credits": "^(?=.*(credits|ects))(?=.*(more than|less than|around|about)?).*$",
         "sws": "(I(('m)| am)? (want (to have)?|need|would like|looking for))?([1-9][0-9]?) (sws)?"
     },
     "user_schedules": {
-        "morning":"^(?:(sun|Sun)(?:day)?|Mon(?:day)?|Tues(?:day)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?)(?=.*(morning))",
-        "afternoon":"^(?:(sun|Sun)(?:day)?|Mon(?:day)?|Tues(?:day)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?)(?=.*(afternoon))"
+        "mon_morn": "(?=.*((M|m)o(n(day)?)?))(?=.*(morning))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "tues_morn": "(?=.*((T|t)u(e(sday)?)?))(?=.*(morning))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "wed_morn": "(?=.*((W|w)e(d(nesday)?)?))(?=.*(morning))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "thurs_morn": "(?=.*((T|t)h(u(rsday)?)?))(?=.*(morning))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "fri_morn": "(?=.*((F|f)r(i(day)?)?))(?=.*(morning))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "mon_after": "(?=.*((M|m)o(n(day)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "tues_after": "(?=.*((T|t)u(e(sday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "wed_after": "(?=.*((W|w)e(d(nesday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "thurs_after": "(?=.*((T|t)h(u(rsday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "fri_after": "(?=.*((F|f)r(i(day)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)"
     },
     "fields": {
         "nlp": "^(?=.*(nlp|natural language processing))",
