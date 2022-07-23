@@ -16,7 +16,23 @@
         "tues_after": "(?=.*((T|t)u(e(sday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "wed_after": "(?=.*((W|w)e(d(nesday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "thurs_after": "(?=.*((T|t)h(u(rsday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
-        "fri_after": "(?=.*((F|f)r(i(day)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)"
+        "fri_after": "(?=.*((F|f)r(i(day)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "negated_mon_morn":"(?=.*((M|m)o(n(day)?)?))(?=.*(morning))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_tues_morn":"(?=.*((T|t)u(e(sday)?)?))(?=.*(morning))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_wed_morn":"(?=.*((W|w)e(d(nesday)?)?))(?=.*(morning))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_thurs_morn":"(?=.*((T|t)h(u(rsday)?)?))(?=.*(morning))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_fri_morn":"(?=.*((F|f)r(i(day)?)?))(?=.*(morning))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_mon_after":"(?=.*((M|m)o(n(day)?)?))(?=.*(afternoon))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_tues_after":"(?=.*((T|t)u(e(sday)?)?))(?=.*(afternoon))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_wed_after":"(?=.*((W|w)e(d(nesday)?)?))(?=.*(afternoon))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_thurs_after":"(?=.*((T|t)h(u(rsday)?)?))(?=.*(afternoon))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_fri_after":"(?=.*((F|f)r(i(day)?)?))(?=.*(afternoon))(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))", 
+        "negated_mon_whole":"(?=.*((M|m)o(n(day)?)?))(?=^(?:(?!(afternoon|morning)).)*$)(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_tues_whole":"(?=.*((T|t)u(e(sday)?)?))(?=^(?:(?!(afternoon|morning)).)*$)(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_wed_whole":"(?=.*((W|w)e(d(nesday)?)?))(?=^(?:(?!(afternoon|morning)).)*$)(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_thurs_whole":"(?=.*((T|t)h(u(rsday)?)?))(?=^(?:(?!(afternoon|morning)).)*$)(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))",
+        "negated_fri_whole":"(?=.*((F|f)r(i(day)?)?))(?=^(?:(?!(afternoon|morning)).)*$)(?=.*(n't|not|do(es)?nt|(are|is)nt|not|no))"
+
     },
     "fields": {
         "nlp": "^(?=.*(nlp|natural language processing))",
