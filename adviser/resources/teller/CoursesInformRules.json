@@ -36,15 +36,22 @@
 
     },
     "fields": {
-        "nlp": "^(?=.*(nlp|natural language processing))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "nlp": "^(?=.*(nlp|natural language processing))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(speech|linguistics|programming)).)*$)",
+        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(nlp|natural language processing|linguistics|programming)).)*$)",
+        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(nlp|natural language processing|speech|programming)).)*$)",
+        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(nlp|natural language processing|linguistics|speech)).)*$)",
         "negated_nlp": "^(?=.*(nlp|natural language processing))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
-        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "negated_speech": "^(?=.*(speech))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
-        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "negated_linguistics": "^(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
-        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
-        "negated_programming": "^(?=.*(programming|code|coding))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
+        "negated_programming": "^(?=.*(programming|code|coding))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "nlp_speech":"^(?=.*(nlp|natural language processing))(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(linguistics|programming)).)*$)",
+        "nlp_linguistics":"^(?=.*(nlp|natural language processing))(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(speech|programming)).)*$)",
+        "nlp_programming":"^(?=.*(nlp|natural language processing))(?=.*(programming))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(speech|linguistics)).)*$)",
+        "speech_linguistics":"^(?=.*(speech))(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(nlp|natural language processing|programming)).)*$)",
+        "speech_programming": "^(?=.*(speech))(?=.*(programming))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(nlp|natural language processing|linguistics)).)*$)",
+        "linguistics_programming": "^(?=.*(linguistics))(?=.*(programming))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)(?=^(?:(?!(nlp|natural language processing|speech)).)*$)"
     }, 
+
     "formats": {
         "lecture": "^(?=.*(lecture))",
         "project": "^(?=.*(project))",
