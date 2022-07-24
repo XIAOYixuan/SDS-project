@@ -53,7 +53,16 @@
         "negated_nlp": "^(?=.*(nlp|natural language processing))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
         "negated_speech": "^(?=.*(speech))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
         "negated_linguistics": "^(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
-        "negated_programming": "^(?=.*(programming|code|coding))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
+        "negated_programming": "^(?=.*(programming|code|coding))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_nlp_speech":"^(?=.*(nlp|natural language processing))(?=.*(speech))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_nlp_linguistics":"^(?=.*(nlp|natural language processing))(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_nlp_programming":"^(?=.*(nlp|natural language processing))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_speech_linguistics":"^(?=.*(speech))(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_speech_programming":"^(?=.*(speech))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_linguistics_programming":"^(?=.*(linguistics))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_nlp_speech_linguistics": "^(?=.*(nlp|natural language processing))(?=.*(speech))(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_nlp_speech_programming" :"^(?=.*(nlp|natural language processing))(?=.*(speech))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_speech_linguistics_programming" : "^(?=.*(speech))(?=.*(linguistics))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }, 
 
     "formats": {
