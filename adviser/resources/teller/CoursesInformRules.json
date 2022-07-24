@@ -36,10 +36,14 @@
 
     },
     "fields": {
-        "nlp": "^(?=.*(nlp|natural language processing))",
-        "speech": "^(?=.*(speech))",
-        "linguistics": "^(?=.*(linguistics))",
-        "programming": "^(?=.*(programming|code|coding))"
+        "nlp": "^(?=.*(nlp|natural language processing))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "negated_nlp": "^(?=.*(nlp|natural language processing))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "negated_speech": "^(?=.*(speech))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "negated_linguistics": "^(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "negated_programming": "^(?=.*(programming|code|coding))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }, 
     "formats": {
         "lecture": "^(?=.*(lecture))",
