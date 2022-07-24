@@ -62,12 +62,16 @@
         "negated_linguistics_programming":"^(?=.*(linguistics))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
         "negated_nlp_speech_linguistics": "^(?=.*(nlp|natural language processing))(?=.*(speech))(?=.*(linguistics))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
         "negated_nlp_speech_programming" :"^(?=.*(nlp|natural language processing))(?=.*(speech))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
-        "negated_speech_linguistics_programming" : "^(?=.*(speech))(?=.*(linguistics))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
+        "negated_speech_linguistics_programming" : "^(?=.*(speech))(?=.*(linguistics))(?=.*(programming))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "bad_case": "^(?=.*(any))(?=.*(field))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }, 
 
     "formats": {
-        "lecture": "^(?=.*(lecture))",
-        "project": "^(?=.*(project))",
-        "seminar": "^(?=.*(seminar))"
+        "lecture": "^(?=.*(lecture))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "project": "^(?=.*(project))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "seminar": "^(?=.*(seminar))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_lecture": "^(?=.*(lecture))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_project": "^(?=.*(project))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$",
+        "negated_seminar": "^(?=.*(seminar))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }
 }
