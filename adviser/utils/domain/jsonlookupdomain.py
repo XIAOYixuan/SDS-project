@@ -246,6 +246,7 @@ class TellerDomain(JSONLookupDomain):
     
     def break_down_informs(self, slot_name, value, regex_value):
         """ break down high level informs to smaller one
+        slot_name, text, value
         """
         #TODO: extend it to other fields
         slot_value_pairs = []
@@ -254,7 +255,11 @@ class TellerDomain(JSONLookupDomain):
         sub_slot = self.slot_map[slot_name]
         
         if slot_name == self.total_credits:
-            value = int(value)
+            if not regex_value.isnumeric():
+                slot_value_pairs.append({sub_slot: regex_value})
+                return slot_value_pairs
+                
+            value = int(regex_value)
             
             possible_values = self.get_possible_values(sub_slot)
             for v in possible_values:
