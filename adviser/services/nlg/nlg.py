@@ -169,26 +169,19 @@ class TellerNLG(HandcraftedNLG):
 
     
     def generate_system_utterance(self, sys_act: SysAct = None) -> str:
+        self.logger.info(f"sys act is {sys_act}")
         if sys_act.type == SysActionType.Bye:
             return "Glad to talk with you, bye!" 
+
         elif sys_act.type == SysActionType.Welcome:
             return "Welcome!"
+
         elif sys_act.type == SysActionType.Request:
             return self._process_request(sys_act)
-        elif sys_act.type == SysActionType.InformByName:
-            # need to change the sys act...
-            courses = sys_act.get_values('courses')
 
-            if len(courses) == 0:
-                return "Sorry, looks like you have an ambitious plan! Could you try again with less credits?" 
-            ret = f"To get {sys_act.get_values('total_credits')[0]} credits, you may choose the following course"
-            courses = sys_act.get_values('courses')
-            if len(courses) > 1:
-                ret += "s"
-            ret += ": "
-            ret += ",".join(courses)
-            ret += "."
-            return ret
+        elif sys_act.type == SysActionType.InformByName:
+            return self._process_solusions(sys_act)
+
         elif sys_act.type == SysActionType.RequestMore:
             return "You're welcome. What else can I do for you?"
         else:
@@ -196,19 +189,53 @@ class TellerNLG(HandcraftedNLG):
             return "Sorry, I don't understand!"
 
 
+    def _process_solusions(self, sys_act: SysAct = None):
+        # need to change the sys act...
+        solutions = sys_act.get_values('courses')
+        ret = f"To get {sys_act.get_values('total_credits')[0]} credits, there are {len(solutions)} solution(s). \n"
+
+        for sid, sol in enumerate(solutions):
+            ret += f"Solution {sid}: \n"
+            ret += self._aggregate_on_day(sol)
+        return ret
+
+    def _aggregate_on_day(self, solution):
+        # TODO: make it state
+        self.days = ["mon", "tue", "wed", "thur", "fri"]
+        day_course = {}
+        for course in solution:
+            for day, dur in course[1]:
+                if day not in day_course:
+                    day_course[day] = []
+                day_course[day].append(course[0])
+
+        for key in day_course:
+            day_course[key] = list(set(day_course[key]))
+
+        ret = ''
+        for day in self.days:
+            if day not in day_course: continue
+            ret += '\t' + day.capitalize() + ".:" + ", ".join(day_course[day])
+            ret += "\n"
+        assert len(ret) != 0
+        return ret
+
+
     def _process_request(self, sys_act: SysAct = None):
         if "total_credits" in sys_act.slot_values:
             return "How many credits would you like to earn?"
         elif "user_schedules" in sys_act.slot_values:
             return "What are your regular personal schedules?"
+        elif "fields" in sys_act.slot_values:
+            return "What field do you prefer? (e.g., NLP, speech)"
+        elif "formats" in sys_act.slot_values:
+            return "Which lecture format do you prefer, lecture, project or seminar?"
         elif "error" in sys_act.slot_values:
             slot_values = sys_act.get_values("error")
             self.logger.info(f"error: {slot_values}")
             return self._get_input_format(slot_values[0])
         else:
-            self.logger.info("hey, i don't understand what u mean")
-            print(sys_act)
-            exit(0)
+            raise NotImplementedError(f"sys_act be like {sys_act}")
 
 
     def _get_input_format(self, slot):

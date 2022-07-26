@@ -182,21 +182,26 @@ class TellerBST(HandcraftedBST):
 
 
     def _handle_user_acts(self, user_acts: List[UserAct]):
+        high_dict = self.bs["high_level_informs"]
         for act in user_acts:
             if act.type == UserActionType.Inform and \
                 act.slot in self.domain.high_level_slots():
 
-                self._handle_high_level_user_acts(act)
+                self._handle_high_level_user_acts(act, high_dict)
+        self.bs["high_level_informs"] = high_dict
 
     
-    def _handle_high_level_user_acts(self, act: UserAct):
+    def _handle_high_level_user_acts(self, act: UserAct, high_dict: dict):
         if act.value == "dontcare":
-            self.bs["high_level_informs"][act.slot] = (act.text, [])
+            high_dict[act.slot] = (act.text, [])
         else:
-            new_slot_values = self.domain.break_down_informs(act.slot, act.text) 
-            self.bs["high_level_informs"][act.slot] = (act.text, new_slot_values)
+            new_slot_values = self.domain.break_down_informs(act.slot, act.text, act.value)
+            if act.slot in high_dict:
+                high_dict[act.slot][-1].extend(new_slot_values)
+            else:
+                high_dict[act.slot] = (act.text, new_slot_values)
 
-
+    
     def dialog_start(self):
         """ The original comment says it returns the belief state
         for a new dialog, we do nothing atm
