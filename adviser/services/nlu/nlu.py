@@ -395,6 +395,7 @@ class HandcraftedNLU(Service):
 
         if re_object is None:
             return False
+        print(re_object.groups())
         for o in re_object.groups():
             if o is not None:
                 return True
@@ -552,7 +553,8 @@ class TellerNLU(HandcraftedNLU):
 
         # If nothing else has been matched, set it to bad act
         if len(self.user_acts) == 0 and self.sys_act_info["last_act"] is not None:
-            self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
+            if not self._add_bad_info(user_utterance):
+                self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
 
         self.logger.info("here's user acts")
@@ -566,9 +568,68 @@ class TellerNLU(HandcraftedNLU):
         for slot in self.domain.high_level_slots(): 
             for value in self.inform_regex[slot]:
                 if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
-                    self.logger.info("found it")
+                    self.logger.info(f"found it, [{slot}] value = {value}")
                     self._add_inform(user_utterance, slot, value)
-                    self.logger.info(f"the value for slot {slot} is {value}")
+
+
+    def _add_bad_info(self, user_utterance: str):
+        print(f'adding bad info...', self.sys_act_info)
+        if self.sys_act_info['last_act'] and self.sys_act_info['last_act'].type == SysActionType.Request:
+            # Iterate over all slots in the system request
+            # and set the slot value to BAD
+            self.logger.info(f"user acts: {self.user_acts}")
+            for slot in self.sys_act_info['last_act'].slot_values:
+                # Assign value for the slot mapping from Affirm or Request to Logical,
+                # True if user affirms, False if user denies
+                # Adding user inform act
+                user_act = UserAct(act_type=UserActionType.Bad, text=user_utterance, slot=slot)
+                self.user_acts.append(user_act)
+            return True
+        return False
+
+
+    def _match_general_act(self, user_utterance: str):
+        """
+        Finds general acts (e.g. Hello, Bye) in the user input
+        Only for Hello, Bye, DontCare
+
+        Args:
+            user_utterance {str} --  text input from user
+
+        Returns:
+
+        """
+        # Iteration over all general acts
+        for act in self.general_regex:
+            if re.search(self.general_regex[act], user_utterance, re.I):
+            # Mapping the act to User Act
+                if act != 'dontcare' and act != 'req_everything':
+                    user_act_type = UserActionType(act)
+                else:
+                    user_act_type = act
+                
+                if user_act_type == "dontcare":
+                    if self.sys_act_info['last_act'].type == SysActionType.Request or \
+                            self.sys_act_info['last_act'].type == SysActionType.Select:
+                        # Iteration over all slots mentioned in the last system act
+                        for slot in self.sys_act_info['last_act'].slot_values:
+                            # Adding user inform act
+                            self._add_inform(user_utterance, slot, value=user_act_type)
+
+                # Check if the user wants to get all information about a particular entity
+                elif user_act_type == 'req_everything':
+                    self.req_everything = True
+
+                elif user_act_type == UserActionType.Hello or user_act_type == UserActionType.Bye or user_act_type == UserActionType.Thanks:
+                    # This section covers all general user acts that do not depend on
+                    # the dialog history
+                    # New user act -- UserAct()
+                    # self.logger.info(f"new act type {user_act_type}")
+                    user_act = UserAct(act_type=user_act_type, text=user_utterance)
+                    self.user_acts.append(user_act)
+                
+                else:
+                    self._add_bad_info(user_utterance)
 
 
     def _match_request(self, user_utterance: str):

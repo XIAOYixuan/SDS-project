@@ -176,9 +176,25 @@ class TellerBST(HandcraftedBST):
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
+            self._add_bad_info(user_acts)
         self.logger.info(f"update beliefstate")
         print(self.bs)
         return {'beliefstate': self.bs}
+
+
+    def _add_bad_info(self, user_acts: List[UserAct]):
+        """ Let policy request again
+        """
+        if "bad" in self.bs:
+            self.bs["bad"] = []
+        for act in user_acts:
+            if act.type != UserActionType.Bad:
+                continue
+            if act.slot is None:
+                continue
+            if "bad" not in self.bs:
+                self.bs["bad"] = []
+            self.bs["bad"].append(act.slot)
 
 
     def _handle_user_acts(self, user_acts: List[UserAct]):
@@ -188,6 +204,7 @@ class TellerBST(HandcraftedBST):
                 act.slot in self.domain.high_level_slots():
 
                 self._handle_high_level_user_acts(act, high_dict)
+            
         self.bs["high_level_informs"] = high_dict
 
     
@@ -199,7 +216,7 @@ class TellerBST(HandcraftedBST):
             if act.slot in high_dict:
                 high_dict[act.slot][-1].extend(new_slot_values)
             else:
-                high_dict[act.slot] = (act.text, new_slot_values)
+                high_dict[act.slot] = (act.value, new_slot_values)
 
     
     def dialog_start(self):
