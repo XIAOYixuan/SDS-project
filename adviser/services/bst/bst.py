@@ -23,6 +23,7 @@ from services.service import PublishSubscribe
 from services.service import Service
 from utils.beliefstate import BeliefState
 from utils.useract import UserActionType, UserAct
+from utils.sysact import SysActionType
 
 
 class HandcraftedBST(Service):
@@ -195,6 +196,8 @@ class TellerBST(HandcraftedBST):
             if "bad" not in self.bs:
                 self.bs["bad"] = []
             self.bs["bad"].append(act.slot)
+        if "bad" in self.bs and len(self.bs["bad"]) == 0:
+            self.bs.pop("bad")
 
 
     def _handle_user_acts(self, user_acts: List[UserAct]):
@@ -225,3 +228,12 @@ class TellerBST(HandcraftedBST):
         """
         self.logger.info("hey, bst starts working")
         self.bs = BeliefState(self.domain)
+
+    
+    @PublishSubscribe(sub_topics=["sys_state"])
+    def _update_sys_act_info(self, sys_state):
+        self.logger.info(f"receive sys state, {sys_state}")
+        if "last_act" in sys_state:
+            sys_act = sys_state["last_act"]
+            if sys_act.type == SysActionType.RequestMore:
+                self.bs = BeliefState(self.domain)

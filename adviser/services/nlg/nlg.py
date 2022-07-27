@@ -183,10 +183,10 @@ class TellerNLG(HandcraftedNLG):
             return self._process_solusions(sys_act)
 
         elif sys_act.type == SysActionType.RequestMore:
-            return "You're welcome. What else can I do for you?"
+            return "Looks like we have finished the recommendations. Restarting myself for a new request..."
         else:
             self.logger.info(f"let's check the type {sys_act}")
-            return "Sorry, I don't understand!"
+            return "Sorry, we don't understand!"
 
 
     def _process_solusions(self, sys_act: SysAct = None):

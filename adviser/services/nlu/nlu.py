@@ -553,6 +553,7 @@ class TellerNLU(HandcraftedNLU):
 
         # If nothing else has been matched, set it to bad act
         if len(self.user_acts) == 0 and self.sys_act_info["last_act"] is not None:
+            self.logger.info("nothing match")
             if not self._add_bad_info(user_utterance):
                 self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
@@ -573,7 +574,6 @@ class TellerNLU(HandcraftedNLU):
 
 
     def _add_bad_info(self, user_utterance: str):
-        print(f'adding bad info...', self.sys_act_info)
         if self.sys_act_info['last_act'] and self.sys_act_info['last_act'].type == SysActionType.Request:
             # Iterate over all slots in the system request
             # and set the slot value to BAD
@@ -638,6 +638,6 @@ class TellerNLU(HandcraftedNLU):
 
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
-        self.logger.info(f"receive sys state, {sys_state}")
+        # self.logger.info(f"receive sys state, {sys_state}")
         if "last_act" in sys_state:
             self.sys_act_info["last_act"] = sys_state["last_act"]

@@ -90,6 +90,10 @@ class BeliefState:
         return key in self._history[-1]["high_level_informs"]
 
 
+    def pop(self, key):
+        self._history[-1].pop(key, None)
+
+
     def get_high_level_inform_value(self, key):
         if not self._high_level_key_exist(key):
             return None

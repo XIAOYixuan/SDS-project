@@ -144,6 +144,9 @@ class HandcraftedPolicy(Service):
                 sys_act = SysAct()
                 sys_act.type = SysActionType.Request
                 slot = self._get_open_slot(beliefstate)
+                if slot is None:
+                    sys_act = SysAct()
+                    sys_act.type = SysActionType.RequestMore
                 sys_act.add_value(slot)
                 self.logger.info("user act hello, we grasp a slot")
                 print(slot)
@@ -838,6 +841,12 @@ class TellerCoursePicker:
             if pre_name == cur_name:
                 continue 
             name_bind = pre_name + "+" + cur_name 
+            # TODO: potential bug here
+            if name_bind not in self.time_conflict_graph:
+                print("error!", name_bind)
+                for k in self.time_conflict_graph:
+                    print(f"key in graph: {k}")
+                
             if self.time_conflict_graph[name_bind]:
                 return True
         return False
@@ -936,8 +945,12 @@ class TellerPolicy(HandcraftedPolicy):
                 sys_act, sys_state = self.request_for_bad_inform(beliefstate)
                 self.logger.info(f"sys act meta: {sys_act.meta}")
             else:
-                sys_act = SysAct()
-                sys_act.type = SysActionType.Bad
+                sys_act = self.add_open_slot(beliefstate)
+                if sys_act is None:
+                    sys_act = SysAct()
+                    sys_act.type = SysActionType.RequestMore
+                # sys_act = SysAct()
+                # sys_act.type = SysActionType.Bad
         # if the action is 'bye' tell system to end dialog
         elif UserActionType.Bye in beliefstate["user_acts"]:
             sys_act = SysAct()
@@ -950,11 +963,10 @@ class TellerPolicy(HandcraftedPolicy):
             # they want to earn for the next semester. if
             # that slot is answered, then grasp another open
             # slot
-            sys_act = SysAct()
-            sys_act.type = SysActionType.Request
-            slot = self._get_open_slot(beliefstate)
-            sys_act.add_value(slot)
-            self.logger.info(f"we found the slot [{slot}]")
+            sys_act = self.add_open_slot(beliefstate)
+            if sys_act is None:
+                sys_act = SysAct()
+                sys_act.type = SysActionType.RequestMore
         elif UserActionType.Inform in beliefstate["user_acts"]:
             self.logger.info("we found an INFORM!")
             #TODO: if there's an inform, there must also be a high-lvl inform
@@ -1097,9 +1109,23 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act.add_value(high_lvl_slot, key_val[slot_name])
 
 
+    def add_open_slot(self, beliefstate: BeliefState):
+        slot = self._get_open_slot(beliefstate)
+        if slot is None:
+            return None
+        else:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Request
+            sys_act.add_value(slot)
+            return sys_act
+
     def _get_open_slot(self, beliefstate: BeliefState):
         # TODO
-        filled_slots, _ = self._get_constraints(beliefstate)
+        filled_slots = []
+        for slot in beliefstate['high_level_informs']:
+            filled_slots.append(slot)
+            
+        self.logger.info(f'filled_slots {filled_slots}')
         requestable_slots = self.domain.high_level_slots()
         for slot in requestable_slots:
             if slot not in filled_slots:
