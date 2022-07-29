@@ -246,6 +246,7 @@ class TellerDomain(JSONLookupDomain):
     
     def break_down_informs(self, slot_name, value, regex_value):
         """ break down high level informs to smaller one
+        slot_name, text, value
         """
         #TODO: extend it to other fields
         slot_value_pairs = []
@@ -254,7 +255,11 @@ class TellerDomain(JSONLookupDomain):
         sub_slot = self.slot_map[slot_name]
         
         if slot_name == self.total_credits:
-            value = int(value)
+            if not regex_value.isnumeric():
+                slot_value_pairs.append({sub_slot: regex_value})
+                return slot_value_pairs
+
+            value = int(regex_value)
             
             possible_values = self.get_possible_values(sub_slot)
             for v in possible_values:
@@ -264,7 +269,13 @@ class TellerDomain(JSONLookupDomain):
                 slot_value_pairs.append(sv)
 
         elif slot_name == self.user_schedules:
-            slot_value_pairs.append({sub_slot: value})
+            day, daytime = regex_value.split('_')
+            if daytime == "morn":
+                daytime = "8:00-12:00"
+            else:
+                daytime = "12:00-19:00"
+
+            slot_value_pairs.append({sub_slot: day + ". " + daytime})
 
         elif slot_name == self.fields or slot_name == self.formats:
             # TODO: extract the date and time
