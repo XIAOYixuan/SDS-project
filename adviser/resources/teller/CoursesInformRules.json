@@ -1,8 +1,8 @@
 {
     "total_credits": {
-        "3":  "^(?=.*(credits|ects)?)(?=.*(three|3))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "6":  "^(?=.*(credits|ects)?)(?=.*(six|6))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "9":  "^(?=.*(credits|ects)?)(?=.*(nine|9))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "3":  "^(?=.*(credits|ects)?)(?=.*(three|3))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|30|33|36|39)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "6":  "^(?=.*(credits|ects)?)(?=.*(six|6))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|60|36)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "9":  "^(?=.*(credits|ects)?)(?=.*(nine|9))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|39)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
         "12": "^(?=.*(credits|ects)?)(?=.*(twelve|12))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
         "15": "^(?=.*(credits|ects)?)(?=.*(fifteen|15))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
         "18": "^(?=.*(credits|ects)?)(?=.*(eighteen|18))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
