@@ -708,8 +708,8 @@ class TellerCoursePicker:
         return self.solution
 
     
-    def select_courses(self, candidates):
-        self.candidates = candidates
+    def select_courses(self, raw_candidates):
+        self.candidates = raw_candidates
         
         # update format
         for candidate in self.candidates:
@@ -737,8 +737,8 @@ class TellerCoursePicker:
         different_solutions = []
         for _ in range(3):
             # 3 trials
-            shuffle(candidates)
-            solution = self._select_one_solution(candidates, field_candidates, format_candidates)
+            shuffle(self.candidates)
+            solution = self._select_one_solution(self.candidates, field_candidates, format_candidates)
             different_solutions.append(solution)
         
         # unique_solutions
