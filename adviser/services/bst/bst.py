@@ -213,13 +213,14 @@ class TellerBST(HandcraftedBST):
     
     def _handle_high_level_user_acts(self, act: UserAct, high_dict: dict):
         if act.value == "dontcare":
-            high_dict[act.slot] = (act.text, [])
+            high_dict[act.slot] = [act.value, []]
         else:
             new_slot_values = self.domain.break_down_informs(act.slot, act.text, act.value)
             if act.slot in high_dict:
+                high_dict[act.slot][0] = act.value
                 high_dict[act.slot][-1].extend(new_slot_values)
             else:
-                high_dict[act.slot] = (act.value, new_slot_values)
+                high_dict[act.slot] = [act.value, new_slot_values]
 
     
     def dialog_start(self):

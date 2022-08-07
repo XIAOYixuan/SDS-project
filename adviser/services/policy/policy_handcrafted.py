@@ -1013,7 +1013,8 @@ class TellerPolicy(HandcraftedPolicy):
                 return sys_act, sys_state
             elif not self._input_validation(slot, value):
                 sys_act = SysAct(SysActionType.Request)
-                sys_act.add_value('error', slot)
+                sys_act.add_value(slot)
+                sys_act.meta["error"] = slot
 
                 sys_state = {
                     "last_act": sys_act,
@@ -1050,8 +1051,11 @@ class TellerPolicy(HandcraftedPolicy):
 
     def _input_validation(self, slot, value):
         if slot == self.domain.total_credits:
-            value = int(value)
-            return value % 3 == 0 and value > 0
+            if value.isnumeric():
+                value = int(value)
+                return value % 3 == 0 and value > 0
+            else:
+                return False
         else:
             #TODO
             return True 
