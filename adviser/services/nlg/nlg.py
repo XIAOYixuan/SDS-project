@@ -200,25 +200,18 @@ class TellerNLG(HandcraftedNLG):
         return ret
 
     def _aggregate_on_day(self, solution):
+        # format: [Name, [date and time], Credit]
         # TODO: make it state
-        self.days = ["mon", "tue", "wed", "thur", "fri"]
-        day_course = {}
+        from tabulate import tabulate
+        table = []
         for course in solution:
-            for day, dur in course[1]:
-                if day not in day_course:
-                    day_course[day] = []
-                day_course[day].append(course[0])
+            for day, dur, st, ed in course[1]:
+                table.append([day.capitalize(), dur, course[0], course[2], st, ed])
 
-        for key in day_course:
-            day_course[key] = list(set(day_course[key]))
-
-        ret = ''
-        for day in self.days:
-            if day not in day_course: continue
-            ret += '\t' + day.capitalize() + ".:" + ", ".join(day_course[day])
-            ret += "\n"
-        assert len(ret) != 0
-        return ret
+        table = sorted(table, key=lambda x: (x[-2], x[-1]))
+        table = [x[0:-2] for x in table]
+        ret = tabulate(table, headers=["Day", "Time", "Name", "Credits"], tablefmt="rst")
+        return str(ret)+'\n'
 
 
     def _process_request(self, sys_act: SysAct = None):

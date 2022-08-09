@@ -587,6 +587,7 @@ class TellerCoursePicker:
         self.candidates = []
         self.solution = []
         self.time_slots = {} # used to map name to time
+        self.name2credit = {} # map name to credits
         self.user_schedules = []
         self.formats = set()
         self.fields = set()
@@ -704,7 +705,6 @@ class TellerCoursePicker:
             self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
         else:
             self.solution = []
-        # print("solution", self.solution)
         return self.solution
 
     
@@ -714,6 +714,7 @@ class TellerCoursePicker:
         # update format
         for candidate in self.candidates:
             candidate["Dates"] = self._change_time_format(candidate)
+            self.name2credit[candidate["Name"]] = candidate["Credit"]
             candidate["Credit"] = int(candidate["Credit"])
         if len(self.user_schedules) > 0:
             self.user_schedules = self._change_time_format({
@@ -749,7 +750,7 @@ class TellerCoursePicker:
         
         for sol in different_solutions:
             for i in range(len(sol)):
-                sol[i] = (sol[i], self.time_slots[sol[i]])
+                sol[i] = (sol[i], self.time_slots[sol[i]], self.name2credit[sol[i]])
         return different_solutions
 
 
@@ -804,13 +805,16 @@ class TellerCoursePicker:
             date = date.strip().lower()
             day, duration = date.split('.')
             day, duration = day.strip(), duration.strip()
-            if name not in self.time_slots: 
-                self.time_slots[name] = []
-            self.time_slots[name].append((day, duration))
             min_offset = self.day2min[day]
             start_time, end_time = duration.split('-')
             start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
-            time_slot_in_minutes.append((min_offset+start_time, min_offset+end_time))
+            start_time += min_offset
+            end_time += min_offset
+            time_slot_in_minutes.append((start_time, end_time))
+            
+            if name not in self.time_slots: 
+                self.time_slots[name] = []
+            self.time_slots[name].append((day, duration, start_time, end_time))
         return time_slot_in_minutes
 
 
