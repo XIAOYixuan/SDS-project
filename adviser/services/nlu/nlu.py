@@ -577,6 +577,8 @@ class TellerNLU(HandcraftedNLU):
                                 max_total_credits = [value, user_utterance]
                         else:
                             self._add_inform(user_utterance, slot, value)
+                    else:
+                        self._add_inform(user_utterance, slot, value)
         
         if max_total_credits[0] > 0:
             self._add_inform(max_total_credits[1], self.domain.total_credits, str(max_total_credits[0]))
