@@ -577,6 +577,10 @@ class TellerNLU(HandcraftedNLU):
                                 max_total_credits = [value, user_utterance]
                         else:
                             self._add_inform(user_utterance, slot, value)
+                    elif "badcase" in value:
+                        # inform a bad message
+                        user_act = UserAct(act_type=UserActionType.Bad, text=user_utterance, slot=slot, value=value)
+                        self.user_acts.append(user_act)
                     else:
                         self._add_inform(user_utterance, slot, value)
         
