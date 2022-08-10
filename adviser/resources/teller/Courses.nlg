@@ -1,0 +1,17 @@
+# general rules 
+
+template welcomemsg(): "Loading...Welcome! I am course recommendation bot. Shall we start now?"
+template closingmsg(): "Glad to talk with you, bye!"
+template reqmore(): "Looks like we have finished the recommendations. Restarting myself for a new request..."
+
+# request
+template request(total_credits): "How many credits would you like to earn?"
+template request(user_schedules): "What are your regular personal schedules that you don't want to go conflicts with the courses? (e.g. Have to work on Monday morning.)"
+template request(fields): "What field do you prefer? (e.g., NLP, speech)"
+template request(formats): "Which lecture format do you prefer, lecture, project or seminar?"
+
+# request with error info
+template reqwerr(total_credits): "The total credit is required. Its range is [12-60] and it should be a multiple of 3. Could you re-enter the value?"
+template reqwerr(user_schedules): "Sorry, we don't understand. If you don't have any schedule, can type 'don't care'. We currently only support formats of [day morning/afternoon]. For example, 'Have meetings on every Monday afternoon.'"
+template reqwerr(fields): "Sorry, we couldn't recognize the field. You can choose from the following fields: Programming, general AI, Math, CogSci, Linguistics, Natural Language Processing(NLP), Computer Vision(CV), Speech, Software Engineering, Database. If you don't care about the fileds, could just type 'don't care'. "
+template reqwerr(formats): "Please choose from 'lecture', 'project' and 'seminar'. If you don't have any format preference, you could type 'don't care'."

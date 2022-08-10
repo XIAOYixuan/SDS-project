@@ -909,8 +909,6 @@ class TellerPolicy(HandcraftedPolicy):
 
 
     def dialog_start(self):
-        """ TODO: Reset the policy after each dialog
-        """
         self.turns = 0
         self.first_turn = True
         self.current_suggestions = []
@@ -959,14 +957,7 @@ class TellerPolicy(HandcraftedPolicy):
         elif UserActionType.Bye in beliefstate["user_acts"]:
             sys_act = SysAct()
             sys_act.type = SysActionType.Bye
-        elif UserActionType.Thanks in beliefstate["user_acts"]:
-            sys_act = SysAct()
-            sys_act.type = SysActionType.RequestMore
-        elif UserActionType.Hello in beliefstate["user_acts"]:
-            # if user only says hello, ask how many credits
-            # they want to earn for the next semester. if
-            # that slot is answered, then grasp another open
-            # slot
+        elif UserActionType.Thanks in beliefstate["user_acts"] or UserActionType.Hello in beliefstate["user_acts"]:
             sys_act = self.add_open_slot(beliefstate)
             if sys_act is None:
                 sys_act = SysAct()
@@ -990,7 +981,7 @@ class TellerPolicy(HandcraftedPolicy):
         """ TODO: Only handle the first bad inform for now
         """
         sys_act = SysAct()
-        sys_act.type = SysActionType.Request
+        sys_act.type = SysActionType.RequestWithErrorInfo
         slot = beliefstate['bad'][0]
         sys_act.add_value(slot)
         sys_act.meta["error"] = slot
@@ -1027,7 +1018,7 @@ class TellerPolicy(HandcraftedPolicy):
                 return sys_act, sys_state
 
         sys_act = SysAct()
-        sys_act.type = SysActionType.InformByName
+        sys_act.type = SysActionType.FinalSolution
         self.course_picker.clear()
         candidates = self._query_db(beliefstate)
         for slot in slots:

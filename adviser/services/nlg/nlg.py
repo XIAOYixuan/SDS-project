@@ -165,29 +165,34 @@ class TellerNLG(HandcraftedNLG):
                 language: Language = None):
         Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
 
+        template_file = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../../resources/teller/Courses.nlg')
+        self.templates = TemplateFile(template_file, self.domain)
         self.logger = logger
 
     
     def generate_system_utterance(self, sys_act: SysAct = None) -> str:
-        self.logger.info(f"sys act is {sys_act}")
-        if sys_act.type == SysActionType.Bye:
-            return "Glad to talk with you, bye!" 
-
-        elif sys_act.type == SysActionType.Welcome:
-            return "Welcome!"
-
-        elif sys_act.type == SysActionType.Request:
-            return self._process_request(sys_act)
-
-        elif sys_act.type == SysActionType.InformByName:
-            return self._process_solusions(sys_act)
-
-        elif sys_act.type == SysActionType.RequestMore:
-            return "Looks like we have finished the recommendations. Restarting myself for a new request..."
+        msg = None
+        if sys_act.type == SysActionType.FinalSolution:
+            msg = self._process_solusions(sys_act)
         else:
-            self.logger.info(f"let's check the type {sys_act}")
-            return "Sorry, we don't understand!"
+            try:
+                self.logger.info(f"sys act is {sys_act}")
+                msg = self.templates.create_message(sys_act)
+            except BaseException as error:
+                self.logger.error(error)
+                raise(error)
 
+        # inform if no applicable rule could be found in the template file
+        if msg is None:
+            msg = "Error"
+            self.logger.info('Could not find a fitting rule for the given system act!')
+            self.logger.info("System Action: " + str(sys_act.type)
+                             + " - Slots: " + str(sys_act.slot_values))
+
+        # self.logger.dialog_turn("System Action: " + message)
+        return msg 
 
     def _process_solusions(self, sys_act: SysAct = None):
         # need to change the sys act...
@@ -212,32 +217,3 @@ class TellerNLG(HandcraftedNLG):
         table = [x[0:-2] for x in table]
         ret = tabulate(table, headers=["Day", "Time", "Name", "Credits"], tablefmt="rst")
         return str(ret)+'\n'
-
-
-    def _process_request(self, sys_act: SysAct = None):
-        if "error" in sys_act.meta:
-            slot = sys_act.meta["error"]
-            self.logger.info(f"error: {slot}")
-            return self._get_input_format(slot)
-        elif "total_credits" in sys_act.slot_values:
-            return "How many credits would you like to earn?"
-        elif "user_schedules" in sys_act.slot_values:
-            return "What are your regular personal schedules that you don't want to go conflicts with the courses? (e.g. Have to work on Monday morning.)"
-        elif "fields" in sys_act.slot_values:
-            return "What field do you prefer? (e.g., NLP, speech)"
-        elif "formats" in sys_act.slot_values:
-            return "Which lecture format do you prefer, lecture, project or seminar?"
-        else:
-            raise NotImplementedError(f"sys_act be like {sys_act}")
-
-
-    def _get_input_format(self, slot):
-        if slot == self.domain.total_credits:
-            return "The total credit is required. Its range is [12-60] and it should be a multiple of 3. Could you re-enter the value?"
-        elif slot == self.domain.user_schedules:
-            return "Sorry, we don't understand. If you don't have any schedule, can type 'don't care'. We currently only support formats of [day morning/afternoon]. For example, 'Have meetings on every Monday afternoon.'"
-        elif slot == self.domain.fields:
-            return "Sorry, we couldn't recognize the field. You can choose from the following fields: Programming, general AI, Math, CogSci, Linguistics, Natural Language Processing(NLP), Computer Vision(CV), Speech, Software Engineering, Database. If you don't care about the fileds, could just type 'don't care'. "
-        elif slot == self.domain.formats:
-            return "Please choose from 'lecture', 'project' and 'seminar'. If you don't have any format preference, you could type 'don't care'."
-        
