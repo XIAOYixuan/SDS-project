@@ -236,5 +236,5 @@ class TellerBST(HandcraftedBST):
         self.logger.info(f"receive sys state, {sys_state}")
         if "last_act" in sys_state:
             sys_act = sys_state["last_act"]
-            if sys_act.type == SysActionType.RequestMore:
+            if sys_act.type == SysActionType.RequestMore or sys_act.type == SysActionType.FailAndRestart:
                 self.bs = BeliefState(self.domain)

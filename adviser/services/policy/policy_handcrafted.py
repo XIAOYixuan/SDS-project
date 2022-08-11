@@ -1039,7 +1039,8 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act.add_value('courses', sol)
 
         if len(solutions) == 0:
-            raise NotImplementedError("no solution, should set sys act to Bad or Inform?")
+            sys_act = SysAct()
+            sys_act.type = SysActionType.FailAndRestart
 
         return sys_act, {"last_act": sys_act}
 
