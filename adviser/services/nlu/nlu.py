@@ -83,7 +83,6 @@ class HandcraftedNLU(Service):
         """
         Service.__init__(self, domain=domain)
         self.logger = logger
-        self.logger.info("init nlu")
         self.language = language if language else Language.ENGLISH
 
         # Getting domain information
@@ -93,8 +92,6 @@ class HandcraftedNLU(Service):
         # Getting lists of informable and requestable slots
         self.USER_INFORMABLE = domain.get_informable_slots()
         self.USER_REQUESTABLE = domain.get_requestable_slots()
-        self.logger.info("check user informble and requestable")
-        print(self.USER_INFORMABLE)
 
         # Getting the relative path where regexes are stored
         self.base_folder = os.path.join(get_root_dir(), 'resources', 'nlu_regexes')
@@ -152,7 +149,6 @@ class HandcraftedNLU(Service):
         self.slots_requested, self.slots_informed = set(), set()
         if user_utterance is not None:
             user_utterance = user_utterance.strip()
-            self.logger.info(f"find an utt {user_utterance}")
             self._match_general_act(user_utterance)
             self._match_domain_specific_act(user_utterance)
 
@@ -170,16 +166,10 @@ class HandcraftedNLU(Service):
                 self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
         self._assign_scores()
-        self.logger.dialog_turn("User Actions: %s" % str(self.user_acts))
         result['user_acts'] = self.user_acts
-        self.logger.info("finish matching")
-        print(result) 
-        return result
 
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
-        self.logger.info("receiving update sys act info")
-        print(sys_state)
         if "lastInformedPrimKeyVal" in sys_state:
             self.sys_act_info['last_offer'] = sys_state['lastInformedPrimKeyVal']
         if "lastRequestSlot" in sys_state:
@@ -199,7 +189,6 @@ class HandcraftedNLU(Service):
         """
         # Iteration over all general acts
         for act in self.general_regex:
-            # self.logger.info(f"check act {act}")
             # Check if the regular expression and the user utterance match
             if re.search(self.general_regex[act], user_utterance, re.I):
                 # Mapping the act to User Act
@@ -395,7 +384,6 @@ class HandcraftedNLU(Service):
 
         if re_object is None:
             return False
-        print(re_object.groups())
         for o in re_object.groups():
             if o is not None:
                 return True
@@ -489,10 +477,8 @@ class TellerNLU(HandcraftedNLU):
     def __init__(self, domain: JSONLookupDomain, logger):
         Service.__init__(self, domain=domain) 
         self.logger = logger
-        self.logger.info("hello i'm here")
         self.base_folder = os.path.join(get_root_dir(), 'resources', 'teller')
         self.domain_name = "courses"
-        self.logger.info("init teller nlu")
 
         # for user acts that depends on previous history
         # e.g. confirm, deny, don't care, request
@@ -531,7 +517,6 @@ class TellerNLU(HandcraftedNLU):
             'lastInformedPrimKeyVal': None,
             'lastRequestSlot': None
         }
-        self.logger.info("hello, the dialog starts!")
 
 
     @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"]) 
@@ -541,8 +526,6 @@ class TellerNLU(HandcraftedNLU):
         self.req_everything = False
         self.slots_informed = set()
         self.slots_requested = set()
-
-        self.logger.info(f"I received a user utt: {user_utterance}")
 
         self.user_acts = []
 
@@ -557,8 +540,6 @@ class TellerNLU(HandcraftedNLU):
                 self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
                                               act_type=UserActionType.Bad))
 
-        self.logger.info("here's user acts")
-        print(self.user_acts)
         return {'user_acts': self.user_acts}
 
     
@@ -569,7 +550,6 @@ class TellerNLU(HandcraftedNLU):
         for slot in self.domain.high_level_slots(): 
             for value in self.inform_regex[slot]:
                 if self._check(re.search(self.inform_regex[slot][value], user_utterance, re.I)):
-                    self.logger.info(f"found it, [{slot}] value = {value} typeof {type(value)}")
                     if slot == self.domain.total_credits:
                         if value.isnumeric():
                             value = int(value)
@@ -592,7 +572,6 @@ class TellerNLU(HandcraftedNLU):
         if self.sys_act_info['last_act'] and self.sys_act_info['last_act'].type == SysActionType.Request:
             # Iterate over all slots in the system request
             # and set the slot value to BAD
-            self.logger.info(f"user acts: {self.user_acts}")
             for slot in self.sys_act_info['last_act'].slot_values:
                 # Assign value for the slot mapping from Affirm or Request to Logical,
                 # True if user affirms, False if user denies
@@ -639,7 +618,6 @@ class TellerNLU(HandcraftedNLU):
                     # This section covers all general user acts that do not depend on
                     # the dialog history
                     # New user act -- UserAct()
-                    # self.logger.info(f"new act type {user_act_type}")
                     user_act = UserAct(act_type=user_act_type, text=user_utterance)
                     self.user_acts.append(user_act)
                 
@@ -653,6 +631,5 @@ class TellerNLU(HandcraftedNLU):
 
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
-        # self.logger.info(f"receive sys state, {sys_state}")
         if "last_act" in sys_state:
             self.sys_act_info["last_act"] = sys_state["last_act"]

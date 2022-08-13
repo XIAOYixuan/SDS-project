@@ -178,7 +178,6 @@ class TellerNLG(HandcraftedNLG):
             msg = self._process_solusions(sys_act)
         else:
             try:
-                self.logger.info(f"sys act is {sys_act}")
                 msg = self.templates.create_message(sys_act)
             except BaseException as error:
                 self.logger.error(error)

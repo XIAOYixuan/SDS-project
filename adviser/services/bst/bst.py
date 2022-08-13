@@ -54,8 +54,7 @@ class HandcraftedBST(Service):
         """
         # save last turn to memory
         self.bs.start_new_turn()
-        self.logger.info("updating bst, before")
-        print(self.bs)
+        
         if user_acts:
             self._reset_informs(user_acts)
             self._reset_requests()
@@ -64,8 +63,6 @@ class HandcraftedBST(Service):
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
-        self.logger.info(f"finish update, belif stack is ")
-        print(self.bs)
         return {'beliefstate': self.bs}
 
     def dialog_start(self):
@@ -158,7 +155,6 @@ class TellerBST(HandcraftedBST):
     def __init__(self, domain=None, logger=None):
         Service.__init__(self, domain=domain)
         self.logger = logger
-        self.logger.info(f"My domain is {domain}")
         self.bs = BeliefState(domain)
 
 
@@ -178,8 +174,6 @@ class TellerBST(HandcraftedBST):
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
             self._add_bad_info(user_acts)
-        self.logger.info(f"update beliefstate")
-        print(self.bs)
         return {'beliefstate': self.bs}
 
 
@@ -227,13 +221,11 @@ class TellerBST(HandcraftedBST):
         """ The original comment says it returns the belief state
         for a new dialog, we do nothing atm
         """
-        self.logger.info("hey, bst starts working")
         self.bs = BeliefState(self.domain)
 
     
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
-        self.logger.info(f"receive sys state, {sys_state}")
         if "last_act" in sys_state:
             sys_act = sys_state["last_act"]
             if sys_act.type == SysActionType.RequestMore or sys_act.type == SysActionType.FailAndRestart:
