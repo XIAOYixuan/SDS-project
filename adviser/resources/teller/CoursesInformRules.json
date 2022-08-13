@@ -1,4 +1,8 @@
 {
+    "semester": {
+        "WS": "^(?=.*(winter))(?=^(?:(?!(summer|n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "SS": "^(?=.*(summer))(?=^(?:(?!(winter|n't|not|do(es)?nt|(are|is)nt)).)*$)"
+    },
     "total_credits": {
         "3":  "^(?=.*(credits|ects)?)(?=.*(three|3))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|thirty|30|33|36|39)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
         "6":  "^(?=.*(credits|ects)?)(?=.*(six|6))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|thirty|sixty|60|36)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",

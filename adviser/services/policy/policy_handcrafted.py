@@ -1031,6 +1031,9 @@ class TellerPolicy(HandcraftedPolicy):
                 self._process_field_preference(beliefstate, sys_act)
             elif slot == self.domain.formats:
                 self._process_format_preference(beliefstate, sys_act)
+            elif slot == self.domain.semester:
+                # do nothing
+                pass
             else:
                 raise NotImplementedError(f"unknown slot {slot}")
         
@@ -1068,11 +1071,12 @@ class TellerPolicy(HandcraftedPolicy):
             results = super()._query_db(beliefstate)
         else:
             high_level_dict = beliefstate["high_level_informs"]
-            for slot in high_level_dict: 
-                for constraint in high_level_dict[slot][-1]:
+            # bind constraints of total_credits and semester
+            for credit_c in high_level_dict[self.domain.total_credits][-1]:
+                for sms_c in high_level_dict[self.domain.semester][-1]:
+                    constraint = {**credit_c, **sms_c}
                     cur_results = self.domain.find_entities(constraint)
                     results += cur_results
-        # self.logger.info(f"results for query: {results}")
         results = self.domain.uniq_list(results)
         return results 
     
