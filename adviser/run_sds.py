@@ -24,7 +24,6 @@ This module allows to chat with the dialog system.
 import argparse
 from cmath import log
 import os
-# from SDS.adviser.adviser.services.nlu.nlu import HandcraftedNLU
 
 from services.bst import HandcraftedBST
 from services.domain_tracker.domain_tracker import DomainTracker
@@ -47,27 +46,17 @@ def load_nlg(backchannel: bool, domain = None, logger=None):
         nlg = HandcraftedNLG(domain=domain, logger=logger)
     return nlg
 
-# TODO: remove this
-use_lecture = False
 def load_domain(backchannel: bool = False, logger = None):
     from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
     from services.nlu.nlu import TellerNLU, HandcraftedNLU
     from services.nlg.nlg import TellerNLG, HandcraftedNLG
     from services.policy import TellerPolicy, HandcraftedPolicy
     from services.bst.bst import TellerBST
-    # use_teller = False 
-    if not use_lecture:
-        domain = TellerDomain(name='Courses', json_ontology_file="resources/teller/Courses.json", sqllite_db_file="resources/teller/Courses.db", display_name="Courses")
-        nlu = TellerNLU(domain=domain, logger=logger)
-        bst = TellerBST(domain=domain, logger=logger)
-        policy = TellerPolicy(domain=domain, logger=logger)
-        nlg = TellerNLG(domain=domain, logger=logger)
-    else:
-        domain = JSONLookupDomain('ImsCourses', display_name="courses")
-        nlu = HandcraftedNLU(domain=domain, logger=logger)
-        bst = HandcraftedBST(domain=domain, logger=logger)
-        policy = HandcraftedPolicy(domain=domain, logger=logger)
-        nlg = load_nlg(backchannel=backchannel, domain=domain, logger=logger)
+    domain = TellerDomain(name='Courses', json_ontology_file="resources/teller/Courses.json", sqllite_db_file="resources/teller/Courses.db", display_name="Courses")
+    nlu = TellerNLU(domain=domain, logger=logger)
+    bst = TellerBST(domain=domain, logger=logger)
+    policy = TellerPolicy(domain=domain, logger=logger)
+    nlg = TellerNLG(domain=domain, logger=logger)
     return domain, [nlu, bst, policy, nlg]
 
 if __name__ == "__main__":
@@ -80,13 +69,10 @@ if __name__ == "__main__":
                         default="results",
                         help="specify console log level")
     parser.add_argument('--cuda', action='store_true', help="enable cuda (currently only for asr/tts)")
-    parser.add_argument('--use_lecture', action="store_true") 
     parser.add_argument('--privacy', action='store_true',
                         help="enable random mutations of the recorded voice to mask speaker identity", default=False)
     
     args = parser.parse_args()
-    if args.use_lecture:
-        use_lecture = True
 
     domains = []
     services = []
@@ -99,7 +85,7 @@ if __name__ == "__main__":
                           console_log_lvl=log_lvl,
                           logfile_folder=conversation_log_dir,
                           logfile_basename="full_log")
-    # logger = my_logger
+    
     # load domain specific services
     i_domain, i_services = load_domain(logger=logger)
     domains.append(i_domain)
@@ -108,10 +94,9 @@ if __name__ == "__main__":
 
     # setup dialog system
     services.append(DomainTracker(domains=domains))
-    logger.debug("hi")
     debug_logger = logger if args.debug else None
     #ds = DialogSystem(services=services, debug_logger=debug_logger)
-    ds = DialogSystem(services=services, debug_logger=logger)
+    ds = DialogSystem(services=services, sub_port=12370, pub_port=12371, reg_port=12372, debug_logger=logger)
     error_free = ds.is_error_free_messaging_pipeline()
     if not error_free:
         ds.print_inconsistencies()

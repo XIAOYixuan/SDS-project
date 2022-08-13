@@ -111,7 +111,7 @@ class Service:
     """
 
     def __init__(self, domain: Union[str, Domain] = "", sub_topic_domains: Dict[str, str] = {}, pub_topic_domains: Dict[str, str] = {},
-                 ds_host_addr: str = "127.0.0.1", sub_port: int = 65533, pub_port: int = 65534, protocol: str = "tcp",
+                 ds_host_addr: str = "127.0.0.1", sub_port: int = 12370, pub_port: int = 12371, protocol: str = "tcp",
                  debug_logger: DiasysLogger = None, identifier: str = None):
         """
         Create a new service instance *(call this super constructor from your inheriting classes!)*.
