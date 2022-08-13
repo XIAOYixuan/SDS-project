@@ -1,19 +1,74 @@
 {
+    "semester": {
+        "WS": "^(?=.*(winter))(?=^(?:(?!(summer|n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "SS": "^(?=.*(summer))(?=^(?:(?!(winter|n't|not|do(es)?nt|(are|is)nt)).)*$)"
+    },
     "total_credits": {
-        "true": "(\\b|^| )(^[-+]?[0-9]+$)(\\b|$| )"
+        "3":  "^(?=.*(credits|ects)?)(?=.*(three|3))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|thirty|30|33|36|39)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "6":  "^(?=.*(credits|ects)?)(?=.*(six|6))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|thirty|sixty|60|36)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "9":  "^(?=.*(credits|ects)?)(?=.*(nine|9))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|thirty|39)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "12": "^(?=.*(credits|ects)?)(?=.*(twelve|12))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "15": "^(?=.*(credits|ects)?)(?=.*(fifteen|15))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "18": "^(?=.*(credits|ects)?)(?=.*(eighteen|18))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "21": "^(?=.*(credits|ects)?)(?=.*((twenty(-)?( ?)one)|21))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "24": "^(?=.*(credits|ects)?)(?=.*(twenty(-)?( ?)four|24))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "27": "^(?=.*(credits|ects)?)(?=.*((twenty(-)?( ?)seven)|27))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "30": "^(?=.*(credits|ects)?)(?=.*(thirty|30))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about|three|six|nine)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "33": "^(?=.*(credits|ects)?)(?=.*((thirty(-)?( ?)three)|33))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "36": "^(?=.*(credits|ects)?)(?=.*((thirty(-)?( ?)six)|36))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "39": "^(?=.*(credits|ects)?)(?=.*((thirty(-)?( ?)nine)|39))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "42": "^(?=.*(credits|ects)?)(?=.*((forty(-)?( ?)two)|42))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "45": "^(?=.*(credits|ects)?)(?=.*((forty(-)?( ?)five)|45))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "48": "^(?=.*(credits|ects)?)(?=.*((forty(-)?( ?)eight)|48))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "51": "^(?=.*(credits|ects)?)(?=.*((fifty(-)?( ?)one)|51))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "54": "^(?=.*(credits|ects)?)(?=.*((fifty(-)?( ?)four)|54))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "57": "^(?=.*(credits|ects)?)(?=.*((fifty(-)?( ?)seven)|57))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "60": "^(?=.*(credits|ects)?)(?=.*(sixty|60))(?:(?!(^-|0)))(?:(?!(more than|less than|around|about)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
+        "badcase_negative":"(?=(-[0-9]*))",
+        "badcase_zero": "^0",
+        "badcase_negation": "(?=.*(credit))(?=.*(n't|not|do(es)?nt|(are|is)nt)).*$",
+        "badcase_approx": "[0-9]*(?=(more than|less than|around|about))"
     },
     "user_schedules": {
-        "true": "(\\b|^| )(fri\\. 9:00\\-11:00)(\\b|$| )"
+        "mon_morn": "(?=.*(M|m)o(n(day)?))(?=.*(morning|before noon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "tue_morn": "(?=.*((T|t)u(e(sday)?)?))(?=.*(morning|before noon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "wed_morn": "(?=.*((W|w)e(d(nesday)?)?))(?=.*(morning|before noon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "thur_morn": "(?=.*((T|t)h(u(rsday)?)?))(?=.*(morning|before noon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "fri_morn": "(?=.*((F|f)r(i(day)?)?))(?=.*(morning|before noon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "mon_after": "(?=.*(M|m)o(n(day)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "tue_after": "(?=.*((T|t)u(e(sday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "wed_after": "(?=.*((W|w)e(d(nesday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "thur_after": "(?=.*((T|t)h(u(rsday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "fri_after": "(?=.*((F|f)r(i(day)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "mon_whole": "(?=.*(M|m)o(n(day)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "tue_whole": "(?=.*((T|t)u(e(sday)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "wed_whole": "(?=.*((W|w)e(d(nesday)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "thur_whole": "(?=.*((T|t)h(u(rsday)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "fri_whole": "(?=.*((F|f)r(i(day)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "badcase_noschedule":"^(?=.*(schedule))(?=.*(n't|not|do(es)?nt|(are|is)nt)).*$",
+        "badcase_negation": "(?=.*((Mo(n(day)?)?|Tu(e(sday)?)?|We(d(nesday)?)?|Th(u(rsday)?)?|Fr(i(day)?)?|Sa(t(urday)?)?|Su(n(day)?)?)))(?=.*(n't|not|do(es)?nt|(are|is)nt|not))",
+        "badcase_weekend": "^(?=.*((S|s)a(t(urday)?)?|Su(n(day)?)?)).*$"
     },
     "fields": {
-        "nlp": "^(?=.*((applied )?(\\bnlp\\b|natural language processing)))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$"
+        "nlp": "^(?=.*(nlp|natural language processing))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "ai": "^(?=.*(aritificial intelligence|AI))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "Math": "^(?=.*(math|maths|mathematical|mathematics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "CV": "^(?=.*(computer vision|CV))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "CogSci": "^(?=.*(cogsci|cognitive science|cognitive understanding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "Ethics": "^(?=.*(ethics|ethical))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "PolSci": "^(?=.*(politics|politics science))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "database": "^(?=.*(database))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "software": "^(?=.*(software engineering|se))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "badcase_negation": "^(?=.*(any))(?=.*(field))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }, 
+
     "formats": {
-        "lecture": "^(?=.*(lecture))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "project": "^(?=.*(project))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$",
-        "seminar": "^(?=.*(seminar))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$).*$"
+        "lecture": "^(?=.*(lecture))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "project": "^(?=.*(project))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "seminar": "^(?=.*(seminar))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "badcase_negation": "^(?=.*(any))(?=.*(format))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }
 }

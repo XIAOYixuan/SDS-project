@@ -165,29 +165,34 @@ class TellerNLG(HandcraftedNLG):
                 language: Language = None):
         Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
 
+        template_file = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    '../../resources/teller/Courses.nlg')
+        self.templates = TemplateFile(template_file, self.domain)
         self.logger = logger
 
     
     def generate_system_utterance(self, sys_act: SysAct = None) -> str:
-        self.logger.info(f"sys act is {sys_act}")
-        if sys_act.type == SysActionType.Bye:
-            return "Glad to talk with you, bye!" 
-
-        elif sys_act.type == SysActionType.Welcome:
-            return "Welcome!"
-
-        elif sys_act.type == SysActionType.Request:
-            return self._process_request(sys_act)
-
-        elif sys_act.type == SysActionType.InformByName:
-            return self._process_solusions(sys_act)
-
-        elif sys_act.type == SysActionType.RequestMore:
-            return "You're welcome. What else can I do for you?"
+        msg = None
+        if sys_act.type == SysActionType.FinalSolution:
+            msg = self._process_solusions(sys_act)
         else:
-            self.logger.info(f"let's check the type {sys_act.type}")
-            return "Sorry, I don't understand!"
+            try:
+                self.logger.info(f"sys act is {sys_act}")
+                msg = self.templates.create_message(sys_act)
+            except BaseException as error:
+                self.logger.error(error)
+                raise(error)
 
+        # inform if no applicable rule could be found in the template file
+        if msg is None:
+            msg = "Error"
+            self.logger.info('Could not find a fitting rule for the given system act!')
+            self.logger.info("System Action: " + str(sys_act.type)
+                             + " - Slots: " + str(sys_act.slot_values))
+
+        # self.logger.dialog_turn("System Action: " + message)
+        return msg 
 
     def _process_solusions(self, sys_act: SysAct = None):
         # need to change the sys act...
@@ -200,44 +205,15 @@ class TellerNLG(HandcraftedNLG):
         return ret
 
     def _aggregate_on_day(self, solution):
+        # format: [Name, [date and time], Credit]
         # TODO: make it state
-        self.days = ["mon", "tue", "wed", "thur", "fri"]
-        day_course = {}
+        from tabulate import tabulate
+        table = []
         for course in solution:
-            for day, dur in course[1]:
-                if day not in day_course:
-                    day_course[day] = []
-                day_course[day].append(course[0])
+            for day, dur, st, ed in course[1]:
+                table.append([day.capitalize(), dur, course[0], course[2], st, ed])
 
-        for key in day_course:
-            day_course[key] = list(set(day_course[key]))
-
-        ret = ''
-        for day in self.days:
-            if day not in day_course: continue
-            ret += '\t' + day.capitalize() + ".:" + ", ".join(day_course[day])
-            ret += "\n"
-        assert len(ret) != 0
-        return ret
-
-
-    def _process_request(self, sys_act: SysAct = None):
-        if "total_credits" in sys_act.slot_values:
-            return "How many credits would you like to earn?"
-        elif "user_schedules" in sys_act.slot_values:
-            return "What are your regular personal schedules?"
-        elif "fields" in sys_act.slot_values:
-            return "What field do you prefer? (e.g., NLP, speech)"
-        elif "formats" in sys_act.slot_values:
-            return "Which lecture format do you prefer, lecture, project or seminar?"
-        elif "error" in sys_act.slot_values:
-            slot_values = sys_act.get_values("error")
-            self.logger.info(f"error: {slot_values}")
-            return self._get_input_format(slot_values[0])
-        else:
-            raise NotImplementedError(f"sys_act be like {sys_act}")
-
-
-    def _get_input_format(self, slot):
-        if slot == self.domain.total_credits:
-            return "The total credit should be greater than 0 and a multiple of 3. Could you re-enter the value?"
+        table = sorted(table, key=lambda x: (x[-2], x[-1]))
+        table = [x[0:-2] for x in table]
+        ret = tabulate(table, headers=["Day", "Time", "Name", "Credits"], tablefmt="rst")
+        return str(ret)+'\n'

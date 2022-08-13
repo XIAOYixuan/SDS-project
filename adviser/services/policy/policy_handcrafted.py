@@ -126,6 +126,7 @@ class HandcraftedPolicy(Service):
         if UserActionType.Bad in beliefstate["user_acts"]:
             sys_act = SysAct()
             sys_act.type = SysActionType.Bad
+
         # if the action is 'bye' tell system to end dialog
         elif UserActionType.Bye in beliefstate["user_acts"]:
             sys_act = SysAct()
@@ -143,6 +144,9 @@ class HandcraftedPolicy(Service):
                 sys_act = SysAct()
                 sys_act.type = SysActionType.Request
                 slot = self._get_open_slot(beliefstate)
+                if slot is None:
+                    sys_act = SysAct()
+                    sys_act.type = SysActionType.RequestMore
                 sys_act.add_value(slot)
                 self.logger.info("user act hello, we grasp a slot")
                 print(slot)
@@ -583,6 +587,7 @@ class TellerCoursePicker:
         self.candidates = []
         self.solution = []
         self.time_slots = {} # used to map name to time
+        self.name2credit = {} # map name to credits
         self.user_schedules = []
         self.formats = set()
         self.fields = set()
@@ -654,14 +659,13 @@ class TellerCoursePicker:
 
 
     def _fake_query(self, slot, targets):
-        # TODO: should query db!
         if len(targets) == 0:
             return set()
 
         ret = []
         for course in self.candidates:
             for target in targets:
-                if target in course[slot].lower():
+                if target.lower() in course[slot].lower():
                     ret.append(course["Name"])
                     break
         return set(ret)
@@ -671,12 +675,12 @@ class TellerCoursePicker:
         # stage 1: select the courses that meet both requirements, half total credits
         inter_set = list(field_candidates&format_candidates)
         inter_credits, inter_set_solution = self._search_for_preference(inter_set, candidates, max(3, int(0.5 * self.total_credits)))
-        print("inter_set results", inter_credits, inter_set_solution)
+        # print("inter_set results", inter_credits, inter_set_solution)
         
         # stage 2: select the course that meet either requirements, half total credits
         union_set = (field_candidates| format_candidates) - inter_set_solution
         union_credits, union_set_solution = self._search_for_preference(union_set, candidates, max(0, self.total_credits - inter_credits))
-        print("union results", union_credits, union_set_solution)
+        # print("union results", union_credits, union_set_solution)
 
 
         # stage 3: 
@@ -703,12 +707,13 @@ class TellerCoursePicker:
         return self.solution
 
     
-    def select_courses(self, candidates):
-        self.candidates = candidates
+    def select_courses(self, raw_candidates):
+        self.candidates = raw_candidates
         
         # update format
         for candidate in self.candidates:
             candidate["Dates"] = self._change_time_format(candidate)
+            self.name2credit[candidate["Name"]] = candidate["Credit"]
             candidate["Credit"] = int(candidate["Credit"])
         if len(self.user_schedules) > 0:
             self.user_schedules = self._change_time_format({
@@ -723,18 +728,23 @@ class TellerCoursePicker:
 
         field_candidates = self._fake_query("Field", self.fields)
         format_candidates = self._fake_query("Format", self.formats)
-        print('--------------------------field format candidates-----------------------------------------')
-        print(type(field_candidates), field_candidates)
-        print(type(format_candidates), format_candidates)
-        print(format_candidates&field_candidates)
-        print('-------------------------------------------------------------------')
+        # print('--------------------------field format candidates-----------------------------------------')
+        # print(type(field_candidates), field_candidates)
+        # print(type(format_candidates), format_candidates)
+        # print(format_candidates&field_candidates)
+        # print('-------------------------------------------------------------------')
 
         different_solutions = []
         for _ in range(3):
             # 3 trials
-            shuffle(candidates)
-            solution = self._select_one_solution(candidates, field_candidates, format_candidates)
+            shuffle(self.candidates)
+            solution = self._select_one_solution(self.candidates, field_candidates, format_candidates)
+            if len(solution) == 0:
+                continue
             different_solutions.append(solution)
+        
+        if len(different_solutions) == 0:
+            return []
         
         # unique_solutions
         different_solutions = [list(x) for x in set(tuple(x) for x in different_solutions)]
@@ -744,7 +754,7 @@ class TellerCoursePicker:
         
         for sol in different_solutions:
             for i in range(len(sol)):
-                sol[i] = (sol[i], self.time_slots[sol[i]])
+                sol[i] = (sol[i], self.time_slots[sol[i]], self.name2credit[sol[i]])
         return different_solutions
 
 
@@ -799,13 +809,16 @@ class TellerCoursePicker:
             date = date.strip().lower()
             day, duration = date.split('.')
             day, duration = day.strip(), duration.strip()
-            if name not in self.time_slots: 
-                self.time_slots[name] = []
-            self.time_slots[name].append((day, duration))
             min_offset = self.day2min[day]
             start_time, end_time = duration.split('-')
             start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
-            time_slot_in_minutes.append((min_offset+start_time, min_offset+end_time))
+            start_time += min_offset
+            end_time += min_offset
+            time_slot_in_minutes.append((start_time, end_time))
+            
+            if name not in self.time_slots: 
+                self.time_slots[name] = []
+            self.time_slots[name].append((day, duration, start_time, end_time))
         return time_slot_in_minutes
 
 
@@ -836,6 +849,12 @@ class TellerCoursePicker:
             if pre_name == cur_name:
                 continue 
             name_bind = pre_name + "+" + cur_name 
+            # TODO: potential bug here
+            if name_bind not in self.time_conflict_graph:
+                print("error!", name_bind)
+                for k in self.time_conflict_graph:
+                    print(f"key in graph: {k}")
+                
             if self.time_conflict_graph[name_bind]:
                 return True
         return False
@@ -848,33 +867,37 @@ class TellerCoursePicker:
         self.stack.append(cur_id)
         # print(f"brute_forcing: {cur_id} course {self.candidates[cur_id]['Name']} credits {cur_credits}")
         if cur_id >= len(self.candidates):
+            # print(f"cur_id {cur_id} > {len(self.candidates)}")
             self.stack.pop()
             return False
 
         if self._has_time_conflicts(cur_id):
+            # print(f'{cur_id} has time conflicts!')
             self.stack.pop()
             return False
+
         # print(f'cur credits: {cur_credits} total_credits: {total_credits} cur_id : {cur_id}')
-        # option 1: choose myself
+        # option 1: choose myself and meet the credits
         new_credit = cur_credits + int(self.candidates[cur_id]['Credit'])
         if new_credit == total_credits:
             self.solution.append(self.candidates[cur_id]['Name'])
             # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
             self.stack.pop()
             return True
+        # option 1: choose myself and need to explore more 
         elif self._brute_force_meet_total_credits(new_credit, cur_id+1, total_credits):
             self.solution.append(self.candidates[cur_id]['Name'])
             # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
             self.stack.pop()
             return True
-        elif self._brute_force_meet_total_credits(cur_credits, cur_id+1, total_credits):
-            # option 2: don't choose myself
+        
+        # option 2: don't choose myself
+        self.stack.pop()
+        if self._brute_force_meet_total_credits(cur_credits, cur_id+1, total_credits):
             # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
-            self.stack.pop()
             return True
         else:
             # print(f"fail at {cur_id}")
-            self.stack.pop()
             return False
 
 
@@ -890,8 +913,6 @@ class TellerPolicy(HandcraftedPolicy):
 
 
     def dialog_start(self):
-        """ TODO: Reset the policy after each dialog
-        """
         self.turns = 0
         self.first_turn = True
         self.current_suggestions = []
@@ -926,25 +947,25 @@ class TellerPolicy(HandcraftedPolicy):
         self._remove_gen_actions(beliefstate)
 
         if UserActionType.Bad in beliefstate["user_acts"]:
-            sys_act = SysAct()
-            sys_act.type = SysActionType.Bad
+            if "bad" in beliefstate:
+                sys_act, sys_state = self.request_for_bad_inform(beliefstate)
+                self.logger.info(f"sys act meta: {sys_act.meta}")
+            else:
+                sys_act = self.add_open_slot(beliefstate)
+                if sys_act is None:
+                    sys_act = SysAct()
+                    sys_act.type = SysActionType.RequestMore
+                # sys_act = SysAct()
+                # sys_act.type = SysActionType.Bad
         # if the action is 'bye' tell system to end dialog
         elif UserActionType.Bye in beliefstate["user_acts"]:
             sys_act = SysAct()
             sys_act.type = SysActionType.Bye
-        elif UserActionType.Thanks in beliefstate["user_acts"]:
-            sys_act = SysAct()
-            sys_act.type = SysActionType.RequestMore
-        elif UserActionType.Hello in beliefstate["user_acts"]:
-            # if user only says hello, ask how many credits
-            # they want to earn for the next semester. if
-            # that slot is answered, then grasp another open
-            # slot
-            sys_act = SysAct()
-            sys_act.type = SysActionType.Request
-            slot = self._get_open_slot(beliefstate)
-            sys_act.add_value(slot)
-            self.logger.info(f"we found the slot [{slot}]")
+        elif UserActionType.Thanks in beliefstate["user_acts"] or UserActionType.Hello in beliefstate["user_acts"]:
+            sys_act = self.add_open_slot(beliefstate)
+            if sys_act is None:
+                sys_act = SysAct()
+                sys_act.type = SysActionType.RequestMore
         elif UserActionType.Inform in beliefstate["user_acts"]:
             self.logger.info("we found an INFORM!")
             #TODO: if there's an inform, there must also be a high-lvl inform
@@ -958,6 +979,22 @@ class TellerPolicy(HandcraftedPolicy):
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
+    
+
+    def request_for_bad_inform(self, beliefstate: BeliefState):
+        """ TODO: Only handle the first bad inform for now
+        """
+        sys_act = SysAct()
+        sys_act.type = SysActionType.RequestWithErrorInfo
+        slot = beliefstate['bad'][0]
+        sys_act.add_value(slot)
+        sys_act.meta["error"] = slot
+
+        sys_state = {
+                    "last_act": sys_act,
+                    "lastRequestSlot": [slot]
+                }
+        return sys_act, sys_state
 
 
     def _next_action(self, beliefstate: BeliefState):
@@ -975,7 +1012,8 @@ class TellerPolicy(HandcraftedPolicy):
                 return sys_act, sys_state
             elif not self._input_validation(slot, value):
                 sys_act = SysAct(SysActionType.Request)
-                sys_act.add_value('error', slot)
+                sys_act.add_value(slot)
+                sys_act.meta["error"] = slot
 
                 sys_state = {
                     "last_act": sys_act,
@@ -984,7 +1022,7 @@ class TellerPolicy(HandcraftedPolicy):
                 return sys_act, sys_state
 
         sys_act = SysAct()
-        sys_act.type = SysActionType.InformByName
+        sys_act.type = SysActionType.FinalSolution
         self.course_picker.clear()
         candidates = self._query_db(beliefstate)
         for slot in slots:
@@ -997,6 +1035,9 @@ class TellerPolicy(HandcraftedPolicy):
                 self._process_field_preference(beliefstate, sys_act)
             elif slot == self.domain.formats:
                 self._process_format_preference(beliefstate, sys_act)
+            elif slot == self.domain.semester:
+                # do nothing
+                pass
             else:
                 raise NotImplementedError(f"unknown slot {slot}")
         
@@ -1005,15 +1046,19 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act.add_value('courses', sol)
 
         if len(solutions) == 0:
-            raise NotImplementedError("no solution, should set sys act to Bad or Inform?")
+            sys_act = SysAct()
+            sys_act.type = SysActionType.FailAndRestart
 
         return sys_act, {"last_act": sys_act}
 
 
     def _input_validation(self, slot, value):
         if slot == self.domain.total_credits:
-            value = int(value)
-            return value % 3 == 0 and value > 0
+            if value.isnumeric():
+                value = int(value)
+                return value % 3 == 0 and value > 0
+            else:
+                return False
         else:
             #TODO
             return True 
@@ -1030,11 +1075,12 @@ class TellerPolicy(HandcraftedPolicy):
             results = super()._query_db(beliefstate)
         else:
             high_level_dict = beliefstate["high_level_informs"]
-            for slot in high_level_dict: 
-                for constraint in high_level_dict[slot][-1]:
+            # bind constraints of total_credits and semester
+            for credit_c in high_level_dict[self.domain.total_credits][-1]:
+                for sms_c in high_level_dict[self.domain.semester][-1]:
+                    constraint = {**credit_c, **sms_c}
                     cur_results = self.domain.find_entities(constraint)
                     results += cur_results
-        # self.logger.info(f"results for query: {results}")
         results = self.domain.uniq_list(results)
         return results 
     
@@ -1071,9 +1117,23 @@ class TellerPolicy(HandcraftedPolicy):
             sys_act.add_value(high_lvl_slot, key_val[slot_name])
 
 
+    def add_open_slot(self, beliefstate: BeliefState):
+        slot = self._get_open_slot(beliefstate)
+        if slot is None:
+            return None
+        else:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.Request
+            sys_act.add_value(slot)
+            return sys_act
+
     def _get_open_slot(self, beliefstate: BeliefState):
         # TODO
-        filled_slots, _ = self._get_constraints(beliefstate)
+        filled_slots = []
+        for slot in beliefstate['high_level_informs']:
+            filled_slots.append(slot)
+            
+        self.logger.info(f'filled_slots {filled_slots}')
         requestable_slots = self.domain.high_level_slots()
         for slot in requestable_slots:
             if slot not in filled_slots:

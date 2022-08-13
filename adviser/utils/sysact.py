@@ -30,12 +30,16 @@ class SysActionType(Enum):
     InformByName = 'inform_byname'
     InformByAlternatives = 'inform_alternatives'
     Request = 'request'
+    RequestAgain = 'request_again'
     Confirm = 'confirm'
     Select = 'select'
     RequestMore = 'reqmore'
     Bad = 'bad'
     Bye = 'closingmsg'
     ConfirmRequest = 'confreq'
+    RequestWithErrorInfo = 'reqwerr'
+    FinalSolution = 'final_sol'
+    FailAndRestart = 'fail_restart'
 
 
 class SysAct(object):
@@ -52,6 +56,8 @@ class SysAct(object):
         """
         self.type = act_type
         self.slot_values = slot_values if slot_values is not None else {}
+        # a dict carrying different information
+        self.meta = {}
 
     def __repr__(self):
         return f"""SysAct(act_type={self.type}
