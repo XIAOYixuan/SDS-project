@@ -98,14 +98,11 @@ class HandcraftedPolicy(Service):
         self.turns += 1
         # do nothing on the first turn --LV
         sys_state = {}
-        self.logger.info("receiving a belief state")
         if self.first_turn and not beliefstate['user_acts']:
             self.first_turn = False
             sys_act = SysAct()
             sys_act.type = SysActionType.Welcome
             sys_state["last_act"] = sys_act
-            self.logger.info("this's the first turn, and user did nothing, so let's welcom")
-            print('sys_act', sys_act, 'sys_state', sys_state)
             return {'sys_act': sys_act, "sys_state": sys_state}
 
         # Handles case where it was the first turn, but there are user acts
@@ -116,8 +113,6 @@ class HandcraftedPolicy(Service):
             sys_act = SysAct()
             sys_act.type = SysActionType.Bye
             sys_state["last_act"] = sys_act
-            self.logger.info(f"match the max_turn {self.max_turns}")
-            print('sys_act', sys_act, 'sys_state', sys_state)
             return {'sys_act': sys_act, "sys_state": sys_state}
 
         # removes hello and thanks if there are also domain specific actions
@@ -138,8 +133,6 @@ class HandcraftedPolicy(Service):
         # If user only says hello, request a random slot to move dialog along
         elif UserActionType.Hello in beliefstate["user_acts"] or UserActionType.SelectDomain in beliefstate["user_acts"]:
             # as long as there are open slots, choose one randomly
-            self.logger.info("looks like we got a hello?")
-            self.logger.info(f"user act list {beliefstate['user_acts']}")
             if self._get_open_slot(beliefstate):
                 sys_act = SysAct()
                 sys_act.type = SysActionType.Request
@@ -148,14 +141,10 @@ class HandcraftedPolicy(Service):
                     sys_act = SysAct()
                     sys_act.type = SysActionType.RequestMore
                 sys_act.add_value(slot)
-                self.logger.info("user act hello, we grasp a slot")
-                print(slot)
-                print("sys_act is ", sys_act)
 
             # If there are no more open slots, ask the user if you can help with anything else since
             # this can only happen in the case an offer has already been made --LV
             else:
-                self.logger.info("looks like slot is done, ask what else can it help, try to launch a new conversation maybe")
                 sys_act = SysAct()
                 sys_act.type = SysActionType.RequestMore
 
@@ -170,7 +159,6 @@ class HandcraftedPolicy(Service):
             self.logger.dialog_turn("System Action: " + str(sys_act))
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
-        self.logger.info(f"The final sys act is {sys_act.type} {sys_act.slot_values}")
         return {'sys_act': sys_act, "sys_state": sys_state}
 
     def _remove_gen_actions(self, beliefstate: BeliefState):
@@ -194,7 +182,6 @@ class HandcraftedPolicy(Service):
             elif UserActionType.Bad in act_types_lst:
                 act_types_lst.remove(UserActionType.Bad)
             elif UserActionType.Hello in act_types_lst:
-                self.logger.info("we're removing hello")
                 act_types_lst.remove(UserActionType.Hello)
             else:
                 break
@@ -918,7 +905,6 @@ class TellerPolicy(HandcraftedPolicy):
         self.current_suggestions = []
         self.s_index = 0
         self.course_picker.clear()
-        self.logger.info("hi, policy starts!")
 
 
     @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_act", "sys_state"])
@@ -949,36 +935,34 @@ class TellerPolicy(HandcraftedPolicy):
         if UserActionType.Bad in beliefstate["user_acts"]:
             if "bad" in beliefstate:
                 sys_act, sys_state = self.request_for_bad_inform(beliefstate)
-                self.logger.info(f"sys act meta: {sys_act.meta}")
             else:
-                sys_act = self.add_open_slot(beliefstate)
-                if sys_act is None:
-                    sys_act = SysAct()
-                    sys_act.type = SysActionType.RequestMore
-                # sys_act = SysAct()
-                # sys_act.type = SysActionType.Bad
-        # if the action is 'bye' tell system to end dialog
+                sys_act = self.request_open_or_more(beliefstate)
+        
         elif UserActionType.Bye in beliefstate["user_acts"]:
-            sys_act = SysAct()
-            sys_act.type = SysActionType.Bye
+            sys_act = SysAct(SysActionType.Bye)
+        
         elif UserActionType.Thanks in beliefstate["user_acts"] or UserActionType.Hello in beliefstate["user_acts"]:
-            sys_act = self.add_open_slot(beliefstate)
-            if sys_act is None:
-                sys_act = SysAct()
-                sys_act.type = SysActionType.RequestMore
+            sys_act = self.request_open_or_more(beliefstate)
+        
         elif UserActionType.Inform in beliefstate["user_acts"]:
-            self.logger.info("we found an INFORM!")
-            #TODO: if there's an inform, there must also be a high-lvl inform
             sys_act, sys_state = self._next_action(beliefstate)
+        
         else:
-            self.logger.info("ERROR: sorry, unk type")
-            exit(0)
+            self.logger.info("ERROR: unk type, marked as BAD")
+            sys_act = self.request_open_or_more(beliefstate)
 
         # TODO: when will last_act be in sys_state
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
+
+    def request_open_or_more(self, beliefstate:BeliefState):
+        sys_act = self.add_open_slot(beliefstate)
+        if sys_act is None:
+            sys_act = SysAct()
+            sys_act.type = SysActionType.RequestMore
+        return sys_act
     
 
     def request_for_bad_inform(self, beliefstate: BeliefState):
@@ -1133,10 +1117,8 @@ class TellerPolicy(HandcraftedPolicy):
         for slot in beliefstate['high_level_informs']:
             filled_slots.append(slot)
             
-        self.logger.info(f'filled_slots {filled_slots}')
         requestable_slots = self.domain.high_level_slots()
         for slot in requestable_slots:
             if slot not in filled_slots:
                 return slot
-        self.logger.info("Warning, returning a None object.")
         return None
