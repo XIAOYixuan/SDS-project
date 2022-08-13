@@ -54,6 +54,14 @@
         "speech": "^(?=.*(speech))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "linguistics": "^(?=.*(linguistics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "programming": "^(?=.*(programming|code|coding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "ai": "^(?=.*(aritificial intelligence|AI))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "Math": "^(?=.*(math|maths|mathematical|mathematics))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "CV": "^(?=.*(computer vision|CV))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "CogSci": "^(?=.*(cogsci|cognitive science|cognitive understanding))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "Ethics": "^(?=.*(ethics|ethical))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "PolSci": "^(?=.*(politics|politics science))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "database": "^(?=.*(database))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "software": "^(?=.*(software engineering|se))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "badcase_negation": "^(?=.*(any))(?=.*(field))(?=.*(n't|not|do(es)?nt|(are|is)nt))(?=.*(not)?).*$"
     }, 
 

@@ -659,14 +659,13 @@ class TellerCoursePicker:
 
 
     def _fake_query(self, slot, targets):
-        # TODO: should query db!
         if len(targets) == 0:
             return set()
 
         ret = []
         for course in self.candidates:
             for target in targets:
-                if target in course[slot].lower():
+                if target.lower() in course[slot].lower():
                     ret.append(course["Name"])
                     break
         return set(ret)
