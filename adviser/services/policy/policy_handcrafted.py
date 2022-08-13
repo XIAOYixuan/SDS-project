@@ -740,7 +740,12 @@ class TellerCoursePicker:
             # 3 trials
             shuffle(self.candidates)
             solution = self._select_one_solution(self.candidates, field_candidates, format_candidates)
+            if len(solution) == 0:
+                continue
             different_solutions.append(solution)
+        
+        if len(different_solutions) == 0:
+            return []
         
         # unique_solutions
         different_solutions = [list(x) for x in set(tuple(x) for x in different_solutions)]
