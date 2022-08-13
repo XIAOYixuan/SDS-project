@@ -40,6 +40,11 @@
         "wed_after": "(?=.*((W|w)e(d(nesday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "thur_after": "(?=.*((T|t)h(u(rsday)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
         "fri_after": "(?=.*((F|f)r(i(day)?)?))(?=.*(afternoon))(?=^(?:(?!(n't|not|do(es)?nt|(are|is)nt)).)*$)",
+        "mon_whole": "(?=.*(M|m)o(n(day)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "tue_whole": "(?=.*((T|t)u(e(sday)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "wed_whole": "(?=.*((W|w)e(d(nesday)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "thur_whole": "(?=.*((T|t)h(u(rsday)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
+        "fri_whole": "(?=.*((F|f)r(i(day)?)?))(?=^(?:(?!(n't|not|do(es)?nt|morning|noon|afternoon|(are|is)nt)).)*$)",
         "badcase_noschedule":"^(?=.*(schedule))(?=.*(n't|not|do(es)?nt|(are|is)nt)).*$",
         "badcase_negation": "(?=.*((Mo(n(day)?)?|Tu(e(sday)?)?|We(d(nesday)?)?|Th(u(rsday)?)?|Fr(i(day)?)?|Sa(t(urday)?)?|Su(n(day)?)?)))(?=.*(n't|not|do(es)?nt|(are|is)nt|not))",
         "badcase_weekend": "^(?=.*((S|s)a(t(urday)?)?|Su(n(day)?)?)).*$"

@@ -274,8 +274,10 @@ class TellerDomain(JSONLookupDomain):
             day, daytime = regex_value.split('_')
             if daytime == "morn":
                 daytime = "8:00-12:00"
-            else:
+            elif daytime == "after":
                 daytime = "12:00-19:00"
+            else:
+                daytime = "8:00-19:00"
 
             slot_value_pairs.append({sub_slot: day + ". " + daytime})
 
