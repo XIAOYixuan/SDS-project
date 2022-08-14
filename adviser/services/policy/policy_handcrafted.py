@@ -20,7 +20,6 @@
 from collections import defaultdict
 from dataclasses import field
 from typing import List, Dict
-from random import shuffle
 
 from services.service import PublishSubscribe
 from services.service import Service
@@ -30,6 +29,7 @@ from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
 from utils.logger import DiasysLogger
 from utils.useract import UserActionType
 
+from .course_picker import TellerCoursePicker
 
 class HandcraftedPolicy(Service):
     """ Base class for handcrafted policies.
@@ -559,338 +559,19 @@ class HandcraftedPolicy(Service):
             sys_act.add_value(c, constraints[c])
 
 
-#TODO: move this to a new file
-#TODO: uses the sub-pub patter
-class TellerCoursePicker:
-    """ This class carries all the functions to select the courses
-    """
-    def __init__(self) -> None:
-        self.clear()
-        self.day2min = self._build_day2min_mapper()
-
-    def clear(self):
-        self.total_credits = 100
-        self.brute_force_start = 0
-        self.candidates = []
-        self.solution = []
-        self.time_slots = {} # used to map name to time
-        self.name2credit = {} # map name to credits
-        self.user_schedules = []
-        self.formats = set()
-        self.fields = set()
-
-    
-    def update_user_schedules(self, schedules):
-        self.user_schedules = schedules
-
-    
-    def update_total_credits(self, total_credits):
-        self.total_credits = int(total_credits)
-
-
-    def update_formats(self, formats):
-        self.formats = set(formats)
-    
-    
-    def update_fields(self, fields):
-        self.fields = set(fields)
-
-
-    def _random_greedy_select(self, candidates, target_credits):
-        # return remaining credits, solution
-        # TODO: set this as a parameters
-        candidates = candidates
-        best_solutions = []
-        best_credits = 0
-        for i in range(10):
-            shuffle(candidates)
-            solutions = []
-            total_credits = 0
-            for couse_id, course in enumerate(candidates):
-                if self._has_time_conflicts_for_random(candidates, couse_id):
-                    continue
-                cur_credit = int(course['Credit'])
-                if total_credits + cur_credit > target_credits:
-                    break
-                solutions.append(course)
-                total_credits += cur_credit
-            
-            if total_credits > best_credits:
-                best_credits = total_credits
-                best_solutions = solutions
-        
-        best_names = set([course["Name"] for course in best_solutions])
-        return best_credits, best_names
-
-
-    def _brute_force_find_max(self, candidates, target_credits):
-        raise NotImplementedError("brute force search")
-
-
-    def _search_for_preference(self, names, candidates, target_credits):
-        # if the user doesn't provide her preferences, don't do search_for_preference
-        if len(names) == 0:
-            return 0, set() 
-        # filter by name
-        new_candidates = [course for course in candidates if course["Name"] in names]
-        candidates = new_candidates
-        if len(candidates) < self.brute_force_start:
-            # can be handled easily by brute-force search
-            # the following func find a combination with the max score
-            # (but <= meet_credits)
-            return self._brute_force_find_max(candidates, target_credits)
-
-        else:
-            # use a random and greedy algorithm
-            return self._random_greedy_select(candidates, target_credits)
-
-
-    def _fake_query(self, slot, targets):
-        if len(targets) == 0:
-            return set()
-
-        ret = []
-        for course in self.candidates:
-            for target in targets:
-                if target.lower() in course[slot].lower():
-                    ret.append(course["Name"])
-                    break
-        return set(ret)
-
-
-    def _select_one_solution(self, candidates, field_candidates, format_candidates):
-        # stage 1: select the courses that meet both requirements, half total credits
-        inter_set = list(field_candidates&format_candidates)
-        inter_credits, inter_set_solution = self._search_for_preference(inter_set, candidates, max(3, int(0.5 * self.total_credits)))
-        # print("inter_set results", inter_credits, inter_set_solution)
-        
-        # stage 2: select the course that meet either requirements, half total credits
-        union_set = (field_candidates| format_candidates) - inter_set_solution
-        union_credits, union_set_solution = self._search_for_preference(union_set, candidates, max(0, self.total_credits - inter_credits))
-        # print("union results", union_credits, union_set_solution)
-
-
-        # stage 3: 
-        remain_credits = self.total_credits - inter_credits - union_credits
-        
-        if remain_credits == 0:
-            self.solution = list(inter_set_solution) + list(union_set_solution)
-            return self.solution
-        
-        self.solution = []
-        self.stack = []
-        self.candidates = []
-        for course in candidates:
-            course_name = course["Name"]
-            if course_name in inter_set_solution or course_name in union_set_solution:
-                continue
-            self.candidates.append(course)
-        # print(f'start brute force, candidates{self.candidates}, remain_credits {remain_credits}') 
-        status = self._brute_force_meet_total_credits(0, 0, remain_credits)
-        if status:
-            self.solution = list(inter_set_solution) + list(union_set_solution) + self.solution
-        else:
-            self.solution = []
-        return self.solution
-
-    
-    def select_courses(self, raw_candidates):
-        self.candidates = raw_candidates
-        
-        # update format
-        for candidate in self.candidates:
-            candidate["Dates"] = self._change_time_format(candidate)
-            self.name2credit[candidate["Name"]] = candidate["Credit"]
-            candidate["Credit"] = int(candidate["Credit"])
-        if len(self.user_schedules) > 0:
-            self.user_schedules = self._change_time_format({
-                "Name": "User",
-                "Dates": ';'.join(self.user_schedules)
-            })
-        self._remove_user_conflicts()
-
-        # prepare time conflict graph
-        # TODO: has memory redundacy, e.g., has both key i+j and j+i 
-        self.time_conflict_graph = self._build_time_conflict_relation_graph()
-
-        field_candidates = self._fake_query("Field", self.fields)
-        format_candidates = self._fake_query("Format", self.formats)
-        # print('--------------------------field format candidates-----------------------------------------')
-        # print(type(field_candidates), field_candidates)
-        # print(type(format_candidates), format_candidates)
-        # print(format_candidates&field_candidates)
-        # print('-------------------------------------------------------------------')
-
-        different_solutions = []
-        for _ in range(3):
-            # 3 trials
-            shuffle(self.candidates)
-            solution = self._select_one_solution(self.candidates, field_candidates, format_candidates)
-            if len(solution) == 0:
-                continue
-            different_solutions.append(solution)
-        
-        if len(different_solutions) == 0:
-            return []
-        
-        # unique_solutions
-        different_solutions = [list(x) for x in set(tuple(x) for x in different_solutions)]
-        
-        if len(different_solutions) == 1 and len(different_solutions[0]) == 0:
-            return []
-        
-        for sol in different_solutions:
-            for i in range(len(sol)):
-                sol[i] = (sol[i], self.time_slots[sol[i]], self.name2credit[sol[i]])
-        return different_solutions
-
-
-    def _remove_user_conflicts(self):
-        new_candidates = []
-        for candidate in self.candidates:
-            if self._has_overlap(candidate["Dates"], self.user_schedules):
-                continue
-            new_candidates.append(candidate)
-        self.candidates = new_candidates
-
-
-    def _has_overlap(self, times_a, times_b):
-        for a in times_a:
-            for b in times_b:
-                overlap = max(0, min(a[1], b[1]) - max(a[0], b[0]))
-                if overlap > 0:
-                    return True
-        return False
-
-
-    def _build_time_conflict_relation_graph(self):
-        has_conflicts = {}
-        for course_i in self.candidates:
-            i = course_i["Name"]
-            for course_j in self.candidates:
-                j = course_j["Name"]
-                if i == j: continue
-                has_conflicts[i+"+"+j] = self._has_overlap(course_i["Dates"], course_j["Dates"])
-        return has_conflicts
-
-
-    def _build_day2min_mapper(self):
-        days = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
-        cur_offset = 0
-        day2min = {}
-        one_day = 24*3600
-
-        for day in days:
-            day2min[day] = cur_offset 
-            cur_offset += one_day
-        return day2min
-
-
-    def _change_time_format(self, candidate):
-        """ Change time format from Date to minutes
-        """
-        name = candidate["Name"]
-        dates = candidate["Dates"].split(";")
-        time_slot_in_minutes = []
-        for date in dates:
-            date = date.strip().lower()
-            day, duration = date.split('.')
-            day, duration = day.strip(), duration.strip()
-            min_offset = self.day2min[day]
-            start_time, end_time = duration.split('-')
-            start_time, end_time = self._clock2min(start_time), self._clock2min(end_time)
-            start_time += min_offset
-            end_time += min_offset
-            time_slot_in_minutes.append((start_time, end_time))
-            
-            if name not in self.time_slots: 
-                self.time_slots[name] = []
-            self.time_slots[name].append((day, duration, start_time, end_time))
-        return time_slot_in_minutes
-
-
-    def _clock2min(self, clock_time):
-        clock_time = clock_time.strip()
-        hh, mm = clock_time.split(":")
-        hh, mm = int(hh.strip()), int(mm.strip())
-        return hh*60 + mm
-
-
-    def _has_time_conflicts_for_random(self, candidates, course_id: int):
-        # TODO: merge two functions
-        cur_name = candidates[course_id]["Name"]
-        for pid, pre in enumerate(candidates):
-            if pid == course_id: break
-            pre_name = pre["Name"]
-            if pre_name == cur_name: continue
-            name_bind = pre_name + "+" + cur_name 
-            if self.time_conflict_graph[name_bind]:
-                return True
-        return False
-            
-
-    def _has_time_conflicts(self, course_id: int):
-        cur_name = self.candidates[course_id]["Name"]
-        for pre in self.stack:
-            pre_name = self.candidates[pre]["Name"]
-            if pre_name == cur_name:
-                continue 
-            name_bind = pre_name + "+" + cur_name 
-            # TODO: potential bug here
-            if name_bind not in self.time_conflict_graph:
-                print("error!", name_bind)
-                for k in self.time_conflict_graph:
-                    print(f"key in graph: {k}")
-                
-            if self.time_conflict_graph[name_bind]:
-                return True
-        return False
-
-    
-    def _brute_force_meet_total_credits(self, cur_credits = 0, cur_id = 0, total_credits = 0):
-        # TODO: add more constraints here
-        # TODO: need optimization, pruning
-        # TODO: need to maintain a dependency graph, telling the module which courses are choosable
-        self.stack.append(cur_id)
-        # print(f"brute_forcing: {cur_id} course {self.candidates[cur_id]['Name']} credits {cur_credits}")
-        if cur_id >= len(self.candidates):
-            # print(f"cur_id {cur_id} > {len(self.candidates)}")
-            self.stack.pop()
-            return False
-
-        if self._has_time_conflicts(cur_id):
-            # print(f'{cur_id} has time conflicts!')
-            self.stack.pop()
-            return False
-
-        # print(f'cur credits: {cur_credits} total_credits: {total_credits} cur_id : {cur_id}')
-        # option 1: choose myself and meet the credits
-        new_credit = cur_credits + int(self.candidates[cur_id]['Credit'])
-        if new_credit == total_credits:
-            self.solution.append(self.candidates[cur_id]['Name'])
-            # print(f'1st success new credits: {new_credit} cur_id : {cur_id}')
-            self.stack.pop()
-            return True
-        # option 1: choose myself and need to explore more 
-        elif self._brute_force_meet_total_credits(new_credit, cur_id+1, total_credits):
-            self.solution.append(self.candidates[cur_id]['Name'])
-            # print(f'2nd success new credits: {new_credit} cur_id : {cur_id}')
-            self.stack.pop()
-            return True
-        
-        # option 2: don't choose myself
-        self.stack.pop()
-        if self._brute_force_meet_total_credits(cur_credits, cur_id+1, total_credits):
-            # print(f'3rd success new credits: {cur_credits} cur_id : {cur_id}')
-            return True
-        else:
-            # print(f"fail at {cur_id}")
-            return False
-
-
 class TellerPolicy(HandcraftedPolicy):
+    """
+    A simple rule-based policy and a module for searching the solutions.
+    """
 
     def __init__(self, domain: TellerDomain, logger):
+        """
+        Initializes the policy and course picker
+
+        Arguments:
+            domain {domain.jsonlookupdomain.JSONLookupDomain} -- Domain
+
+        """
         self.first_turn = True
         Service.__init__(self, domain=domain)
         self.logger = logger
@@ -899,7 +580,10 @@ class TellerPolicy(HandcraftedPolicy):
         self.course_picker = TellerCoursePicker()
 
 
-    def dialog_start(self):
+    def dialog_start(self): 
+        """
+            resets the policy after each dialog and course picker
+        """
         self.turns = 0
         self.first_turn = True
         self.current_suggestions = []
@@ -909,6 +593,28 @@ class TellerPolicy(HandcraftedPolicy):
 
     @PublishSubscribe(sub_topics=["beliefstate"], pub_topics=["sys_act", "sys_state"])
     def choose_sys_act(self, beliefstate):
+        """
+            Rules:
+            - BAD -> (RequestWithErrorInfo) request again with input instructions 
+            or (Request) request for an open slot
+            or (RequestMore) restart the conversation
+            - Bye -> (Bye) terminate the sytem
+            - Thanks -> (Request) request for an open slot
+                    or (RequestMore) restart the conversation
+            - Inform -> (Request) request for an open slot
+                        (FinalSolution) print the solution
+                        (FailAnsRestart) no solution, restart
+            - others -> (Request) request for an open slot
+                        or (RequestMore) restart the conversation
+            
+            Args:
+                belief_state (BeliefState): a BeliefState obejct representing current system
+                    knowledge
+
+            Returns:
+                (dict): a dictionary with the key "sys_act" and the value that of the systems next
+                    action
+        """
         self.turns += 1
 
         # the following block means do nothing for the very 
@@ -923,8 +629,6 @@ class TellerPolicy(HandcraftedPolicy):
         
         elif self.first_turn:
             self.first_turn = False
-
-        # TODO: when self.turns >= max_turns
 
         # if there're more than one request/intentions in the 
         # utt, remove the filler act
@@ -951,13 +655,17 @@ class TellerPolicy(HandcraftedPolicy):
             self.logger.info("ERROR: unk type, marked as BAD")
             sys_act = self.request_open_or_more(beliefstate)
 
-        # TODO: when will last_act be in sys_state
         if "last_act" not in sys_state:
             sys_state["last_act"] = sys_act
 
         return {'sys_act': sys_act, 'sys_state': sys_state}
 
     def request_open_or_more(self, beliefstate:BeliefState):
+        """
+            check if there is any open slot, if yes, request for it;
+            otherwise, restart a new conversation and signal the
+            other modules(BST, NLU) to clear the cached data.
+        """
         sys_act = self.add_open_slot(beliefstate)
         if sys_act is None:
             sys_act = SysAct()
@@ -966,13 +674,16 @@ class TellerPolicy(HandcraftedPolicy):
     
 
     def request_for_bad_inform(self, beliefstate: BeliefState):
-        """ TODO: Only handle the first bad inform for now
+        """ 
+            have some slot-specific error, request for the slot again
+            but add input instruction(what kind of input is expecting)
+            It is gauranteed that if "bad" exists in beliefstate, there
+            must be at one slot in the list.(code in BST module)
         """
         sys_act = SysAct()
         sys_act.type = SysActionType.RequestWithErrorInfo
         slot = beliefstate['bad'][0]
         sys_act.add_value(slot)
-        sys_act.meta["error"] = slot
 
         sys_state = {
                     "last_act": sys_act,
@@ -982,7 +693,28 @@ class TellerPolicy(HandcraftedPolicy):
 
 
     def _next_action(self, beliefstate: BeliefState):
+        """ 
+            Determines the next action given the states of inform sltos.
+            It checkes whether all high-level slots are filled every time.
+            If there is still at least one open slot, request for it.
+            Otherwise, query the db for courses candidates, update all 
+            high-level slot values to course picker, and launch course 
+            picker to generate a list of solutions.
+
+            If there is at least one solution, sys act type -> "FinalSolution"
+            Otherwise, "FailAndRestart"(notify the user that it fails to 
+            find a solution and start a new conversation)
+
+            Args:
+            beliefstate (BeliefState): BeliefState object; contains all user constraints to date
+            of each possible state
+
+            Return:
+                (SysAct): the next system action
+        """
         slots = self.domain.high_level_slots()
+        # loop over all high slots, if there is an open slot, directly
+        # return a SysAct
         for slot in slots:
             value = beliefstate.get_high_level_inform_value(slot)
             if value is None:
@@ -994,10 +726,13 @@ class TellerPolicy(HandcraftedPolicy):
                     "last_act": sys_act, 
                     "lastRequestSlot": list(sys_act.slot_values.keys())}
                 return sys_act, sys_state
+            
+            # check whether input is valid
+            # TODO: might be removed because we try to capture all 
+            # invalid input format at NLU module(using regex template)
             elif not self._input_validation(slot, value):
                 sys_act = SysAct(SysActionType.Request)
                 sys_act.add_value(slot)
-                sys_act.meta["error"] = slot
 
                 sys_state = {
                     "last_act": sys_act,
@@ -1005,12 +740,19 @@ class TellerPolicy(HandcraftedPolicy):
                 }
                 return sys_act, sys_state
 
+        # all slots are filled, ready to search for solutions
         sys_act = SysAct()
         sys_act.type = SysActionType.FinalSolution
         self.course_picker.clear()
+
+        # the 1st round of data filtering, call _query_db to 
+        # fetch courses that meet the "credit" and "sms" constraints.
         candidates = self._query_db(beliefstate)
+
+        # update all high-level slots values to sys act and 
+        # course picker, different high-level slot have different
+        # data pre-processing method.
         for slot in slots:
-            # TODO: func dictionary
             if slot == self.domain.total_credits:
                 self._process_total_credits(beliefstate, sys_act)
             elif slot == self.domain.user_schedules:
@@ -1037,6 +779,11 @@ class TellerPolicy(HandcraftedPolicy):
 
 
     def _input_validation(self, slot, value):
+        """
+            Some invalid inputs are already captures in regex nlu templaets
+            We keep this for extension. In case there are some situations hard to be 
+            captured by regex.
+        """
         if slot == self.domain.total_credits:
             if value.isnumeric():
                 value = int(value)
@@ -1044,16 +791,21 @@ class TellerPolicy(HandcraftedPolicy):
             else:
                 return False
         else:
-            #TODO
             return True 
     
     
     def _query_db(self, beliefstate: BeliefState):
-        """ Query the courses whose credits <= total credits
-        TODO: query the courses with specific field
+        """ 
+            fetch the courses whose credits <= total credits 
+            and sms == given sms
+
+            Args:
+                BeliefState: carries the constraints
+            
+            Returns:
+                List[dict]: every dict represents a course and its
+                    info(e.g., credits, dates, sms)
         """
-        # when there's a primary name
-        # name = self._get_name(beliefstate)
         results = []
         if len(beliefstate["informs"]) != 0:
             results = super()._query_db(beliefstate)
@@ -1070,6 +822,12 @@ class TellerPolicy(HandcraftedPolicy):
     
     
     def _process_total_credits(self, beliefstate: BeliefState, sys_act: SysAct):
+        """
+            Get the value of total_credits, update its int format
+            to course picker. 
+            Also update this info to SysAct because we need to 
+            present it in NLG
+        """
         total_credits = beliefstate.get_high_level_inform_value(self.domain.total_credits)
         total_credits = int(total_credits)
         self.course_picker.update_total_credits(total_credits)
@@ -1077,31 +835,50 @@ class TellerPolicy(HandcraftedPolicy):
 
 
     def _process_user_schedules(self, beliefstate: BeliefState, sys_act: SysAct):
+        """
+            Get the list of user schedules, only update the list 
+            to course picker. 
+        """
         # add all schedules to user_schedules
-        high_lvl_slot = self.domain.user_schedules
-        self._add_batch_values(beliefstate, high_lvl_slot, sys_act)
-        self.course_picker.update_user_schedules(sys_act.get_values(high_lvl_slot))
+        self._add_batch_values(beliefstate, self.domain.user_schedules, sys_act)
+        user_schedules = sys_act.get_values(self.domain.user_schedules)
+        self.course_picker.update_user_schedules(user_schedules)
     
 
     def _process_field_preference(self, beliefstate: BeliefState, sys_act: SysAct):
+        """
+            Get the list of preferred fields, only update the list 
+            to course picker. 
+        """
         self._add_batch_values(beliefstate, self.domain.fields, sys_act)
         fields = sys_act.get_values(self.domain.fields)
         self.course_picker.update_fields(fields) 
 
 
     def _process_format_preference(self, beliefstate: BeliefState, sys_act: SysAct):
-        self._add_batch_values(beliefstate, self.domain.fields, sys_act)
+        """
+            Get the list of preferred formats, only update the list 
+            to course picker. 
+        """
+        self._add_batch_values(beliefstate, self.domain.formats, sys_act)
         formats = sys_act.get_values(self.domain.formats)
         self.course_picker.update_formats(formats)
 
 
     def _add_batch_values(self, beliefstate, high_lvl_slot, sys_act):
+        """
+            Add a batch of values to SysAct
+        """
         slot_name = self.domain.slot_map[high_lvl_slot]
         for key_val in beliefstate.get_high_level_inform_sub_results(high_lvl_slot):
             sys_act.add_value(high_lvl_slot, key_val[slot_name])
 
 
     def add_open_slot(self, beliefstate: BeliefState):
+        """
+            If there is an open slot, create a Request SysAct for it.
+            Otherwise, return None
+        """
         slot = self._get_open_slot(beliefstate)
         if slot is None:
             return None
@@ -1112,7 +889,9 @@ class TellerPolicy(HandcraftedPolicy):
             return sys_act
 
     def _get_open_slot(self, beliefstate: BeliefState):
-        # TODO
+        """
+            Fetch an open slot(A question that not been answered yet.)
+        """
         filled_slots = []
         for slot in beliefstate['high_level_informs']:
             filled_slots.append(slot)

@@ -219,7 +219,11 @@ class JSONLookupDomain(Domain):
 class TellerDomain(JSONLookupDomain):
 
     def __init__(self, name, json_ontology_file, sqllite_db_file, display_name):
-        """ Load local db to memory
+        """
+        Similar to JSONLookupDomain.
+        Define the string of all high-level slots.
+        Add a dictionary that map high-level slots to their corresponding
+        low-level slots.
         """
         super().__init__(name, json_ontology_file, sqllite_db_file, display_name)
         # TODO: add these to avoid typos in other functions
@@ -247,10 +251,20 @@ class TellerDomain(JSONLookupDomain):
 
     
     def break_down_informs(self, slot_name, value, regex_value):
-        """ break down high level informs to smaller one
-        slot_name, text, value
+        """ 
+            Break down high level informs to smaller one
+            
+            total_credits:
+                high-level means the total credits user want to earn
+                low-level means when querying the database, we need
+                    to select all courses whose credit <= total_credits
+
+            user_schedule:
+                only change the value mapping(TODO: use the Day. hh:mm format in regex template)
+
+            the others stay the same
+
         """
-        #TODO: extend it to other fields
         slot_value_pairs = []
         if slot_name not in self.slot_map:
             assert False and "not impl"
@@ -282,7 +296,6 @@ class TellerDomain(JSONLookupDomain):
             slot_value_pairs.append({sub_slot: day + ". " + daytime})
 
         elif slot_name == self.fields or slot_name == self.formats or slot_name == self.semester:
-            # TODO: extract the date and time
             slot_value_pairs.append({sub_slot: regex_value})
 
         return slot_value_pairs

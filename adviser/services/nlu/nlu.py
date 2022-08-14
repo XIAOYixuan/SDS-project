@@ -28,7 +28,7 @@ from services.service import Service
 from utils import UserAct, UserActionType
 from utils.beliefstate import BeliefState
 from utils.common import Language
-from utils.domain.jsonlookupdomain import JSONLookupDomain
+from utils.domain.jsonlookupdomain import JSONLookupDomain, TellerDomain
 from utils.logger import DiasysLogger
 from utils.sysact import SysAct, SysActionType
 
@@ -473,8 +473,38 @@ class HandcraftedNLU(Service):
 
 
 class TellerNLU(HandcraftedNLU):
+    """
+    This class is a rule-based approach to recognize the users inform
+    for Teller, a course recommendation dialog system.
 
-    def __init__(self, domain: JSONLookupDomain, logger):
+    TellerNLU should be used together with TellerDomain, which defines
+    the high-level slots it can recognize. 
+
+    The output is the same of HandcraftedNLU's., a list of semantic
+    representations of user's inputs.
+
+    "I want to get 30 credits." --> inform(slot=total_credits, value=30)
+
+    Most of the functions are the same as HandcraftedNLU's.
+    The main difference is that TellerNLU currently does not support
+    Request user action type. Also, only "Hello", "Bye", "Thanks" 
+    general types are adopted since there is no confirmation 
+    question in Teller.
+
+    """
+
+    def __init__(self, domain: TellerDomain, logger: DiasysLogger):
+        """
+        Loads
+            - domain key
+            - informable slots
+            - domain-independent regular expressions
+            - domain-specific reguler expressions
+        
+        Args:
+            domain {domain.jsonlookupdomain.TellerDomain}
+            logger: for debug, DiasysLogger
+        """
         Service.__init__(self, domain=domain) 
         self.logger = logger
         self.base_folder = os.path.join(get_root_dir(), 'resources', 'teller')
@@ -494,12 +524,15 @@ class TellerNLU(HandcraftedNLU):
         self.slots_informed = set()
         self.slots_requested = set()
 
-        # load request regex and inform regex
+        # load inform regex
         self._initialize()
 
     
     def _initialize(self):
         """ Loads the regex files
+        
+        So far the system do not support user-side request, 
+        therefore CourseRequestRules.json is an empty json file
         """
         # hello, bye, deny, affirm, thanks, repeat, reqalts, dontcare, req everything
         self.general_regex = json.load(open(self.base_folder + '/GeneralRules.json'))
@@ -507,22 +540,20 @@ class TellerNLU(HandcraftedNLU):
         self.inform_regex = json.load(open(self.base_folder + '/CoursesInformRules.json'))
 
 
-    def dialog_start(self) -> dict:
-        """ The ancestor class impl is pass, NLU set the prev
-        sys act as none, and return nothing.
-        We just say hi here.
-        """
-        self.sys_act_info = {
-            'last_act': None, 
-            'lastInformedPrimKeyVal': None,
-            'lastRequestSlot': None
-        }
-
-
     @PublishSubscribe(sub_topics=["user_utterance"], pub_topics=["user_acts"]) 
     def extract_user_acts(self, user_utterance: str=None) -> dict(user_acts=List[UserAct]):
-        """ Detect User acts
+        """ 
+        Detect the user type and high-level slot-value pairs from
+        utterances.
+
+        Args:
+            user_utterance(str): input sentences entered by the user
+        
+        Returns:
+            dict: a dictionary with the key "user_acts" and the value
+                containing a list of user actions
         """
+
         self.req_everything = False
         self.slots_informed = set()
         self.slots_requested = set()
@@ -534,7 +565,7 @@ class TellerNLU(HandcraftedNLU):
             self._match_general_act(user_utterance)
             self._match_domain_specific_act(user_utterance)
 
-        # If nothing else has been matched, set it to bad act
+        # If nothing else has been matched, set it to bad act type
         if len(self.user_acts) == 0 and self.sys_act_info["last_act"] is not None:
             if not self._add_bad_info(user_utterance):
                 self.user_acts.append(UserAct(text=user_utterance if user_utterance else "",
@@ -544,8 +575,25 @@ class TellerNLU(HandcraftedNLU):
 
     
     def _match_inform(self, user_utterance):
-        # for total_credits
-        # self.logger(f"user informable {self.USER_INFORMABLE}")
+        """ 
+        Iterates over all user inform slot-value regexes and find matches with the user utterance
+
+        TODO:
+        We plan to recognize different types of bad cases using the
+        regex template so that the system could offer more accurate
+        suggestions. For example, there is a template to recognize 
+        negative values for slot "total_values". Later the policy
+        could point out why the user input is incorrect and suggest
+        them to enter a positive value. 
+        The values of such cases all start with "badcase" in the value
+        name. Therefore if "badcase" is in the value name, the 
+        UserActionType should be set to BAD.
+
+        Args:
+            user_utterance {str} --  text input from user
+
+        Returns:
+        """
         max_total_credits = [0, None]
         for slot in self.domain.high_level_slots(): 
             for value in self.inform_regex[slot]:
@@ -569,13 +617,34 @@ class TellerNLU(HandcraftedNLU):
 
 
     def _add_bad_info(self, user_utterance: str):
-        if self.sys_act_info['last_act'] and self.sys_act_info['last_act'].type == SysActionType.Request:
-            # Iterate over all slots in the system request
-            # and set the slot value to BAD
+        """
+        Used to pair the slot and BAD user action type.
+        For example, if the system is requestig the value of slot 
+        "total_credits" and the current input cannot be recognized, 
+        then it generates a UserAct object with type "BAD" and slot
+        "total_credits". Then Policy could use this information
+        to request again with detailed input instructions.
+        
+        If the system is not requesting anything but user action
+        type is a bad case (e.g., accidently type a random char just 
+        after system's welcome msg, or a confimation input), then
+        it fails to match slots and BAD, return False.
+
+        Args:
+            user_utterance: str, user input
+
+        Returns:    
+            True: the system is requesting, create a new UserAct 
+                and append it to self.user_acts
+            False: the system is not requesting
+        """
+
+        last_act = self.sys_act_info['last_act'].type
+        if last_act != SysActionType.Request and last_act != SysActionType.RequestWithErrorInfo:
+            return False
+
+        if self.sys_act_info['last_act']: 
             for slot in self.sys_act_info['last_act'].slot_values:
-                # Assign value for the slot mapping from Affirm or Request to Logical,
-                # True if user affirms, False if user denies
-                # Adding user inform act
                 user_act = UserAct(act_type=UserActionType.Bad, text=user_utterance, slot=slot)
                 self.user_acts.append(user_act)
             return True
@@ -585,7 +654,9 @@ class TellerNLU(HandcraftedNLU):
     def _match_general_act(self, user_utterance: str):
         """
         Finds general acts (e.g. Hello, Bye) in the user input
-        Only for Hello, Bye, DontCare
+        Only for Hello, Bye, Thanks, DontCare, the other values
+        would be considered as unrecognizable and call 
+        _add_bad_info() to create a UserAct with type "BAD"
 
         Args:
             user_utterance {str} --  text input from user
@@ -626,6 +697,9 @@ class TellerNLU(HandcraftedNLU):
 
 
     def _match_request(self, user_utterance: str):
+        """ 
+        Currently the system don't support request at user-side.
+        """
         pass
 
 
