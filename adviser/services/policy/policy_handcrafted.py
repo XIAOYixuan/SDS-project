@@ -712,7 +712,23 @@ class TellerPolicy(HandcraftedPolicy):
             Return:
                 (SysAct): the next system action
         """
+        # do input validation first
         slots = self.domain.high_level_slots()
+        for slot in slots:
+            value = beliefstate.get_high_level_inform_value(slot)
+            if value is not None:
+                # TODO: might be removed because we try to capture all 
+                # invalid input format at NLU module(using regex template)
+                if not self._input_validation(slot, value):
+                    sys_act = SysAct(SysActionType.RequestWithErrorInfo)
+                    sys_act.add_value(slot)
+
+                    sys_state = {
+                        "last_act": sys_act,
+                        "lastRequestSlot": [slot]
+                    }
+                    return sys_act, sys_state
+
         # loop over all high slots, if there is an open slot, directly
         # return a SysAct
         for slot in slots:
@@ -727,19 +743,6 @@ class TellerPolicy(HandcraftedPolicy):
                     "lastRequestSlot": list(sys_act.slot_values.keys())}
                 return sys_act, sys_state
             
-            # check whether input is valid
-            # TODO: might be removed because we try to capture all 
-            # invalid input format at NLU module(using regex template)
-            elif not self._input_validation(slot, value):
-                sys_act = SysAct(SysActionType.Request)
-                sys_act.add_value(slot)
-
-                sys_state = {
-                    "last_act": sys_act,
-                    "lastRequestSlot": [slot]
-                }
-                return sys_act, sys_state
-
         # all slots are filled, ready to search for solutions
         sys_act = SysAct()
         sys_act.type = SysActionType.FinalSolution

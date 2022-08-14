@@ -284,18 +284,7 @@ class TellerDomain(JSONLookupDomain):
                 sv = {sub_slot:v}
                 slot_value_pairs.append(sv)
 
-        elif slot_name == self.user_schedules:
-            day, daytime = regex_value.split('_')
-            if daytime == "morn":
-                daytime = "8:00-12:00"
-            elif daytime == "after":
-                daytime = "12:00-19:00"
-            else:
-                daytime = "8:00-19:00"
-
-            slot_value_pairs.append({sub_slot: day + ". " + daytime})
-
-        elif slot_name == self.fields or slot_name == self.formats or slot_name == self.semester:
+        elif slot_name == self.fields or slot_name == self.formats or slot_name == self.semester or slot_name == self.user_schedules:
             slot_value_pairs.append({sub_slot: regex_value})
 
         return slot_value_pairs
