@@ -54,8 +54,7 @@ class HandcraftedBST(Service):
         """
         # save last turn to memory
         self.bs.start_new_turn()
-        self.logger.info("updating bst, before")
-        print(self.bs)
+        
         if user_acts:
             self._reset_informs(user_acts)
             self._reset_requests()
@@ -64,8 +63,6 @@ class HandcraftedBST(Service):
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
-        self.logger.info(f"finish update, belif stack is ")
-        print(self.bs)
         return {'beliefstate': self.bs}
 
     def dialog_start(self):
@@ -154,37 +151,45 @@ class HandcraftedBST(Service):
 
 
 class TellerBST(HandcraftedBST):
+    """
+    Rule-based belief state tracking.
+    """
 
     def __init__(self, domain=None, logger=None):
         Service.__init__(self, domain=domain)
         self.logger = logger
-        self.logger.info(f"My domain is {domain}")
         self.bs = BeliefState(domain)
 
 
     @PublishSubscribe(sub_topics=["user_acts"], pub_topics=["beliefstate"]) 
     def update_bst(self, user_acts: List[UserAct] = None):
         """
-        Return a dict of belief state
-        TODO: maybe use the super()'s impl?
+            Basically is the same as super().update_bst()
+            Main differences:
+            - only reset_informs, do not reset_request() because
+                user request is not implemented for now.
+            - if a slot is tied with "BAD", add the slot name to "bad" entry in
+                the detionary, so that later Policy knows which slot it needs
+                to request again with input instruction     
         """
         # save last turn to memory
         self.bs.start_new_turn()
         
         if user_acts:
+            self._reset_informs(user_acts)
             self.bs['user_acts'] = self._get_all_usr_action_types(user_acts)
             self._handle_user_acts(user_acts)
             num_entries, discriminable = self.bs.get_num_dbmatches()
             self.bs["num_matches"] = num_entries
             self.bs["discriminable"] = discriminable
             self._add_bad_info(user_acts)
-        self.logger.info(f"update beliefstate")
-        print(self.bs)
         return {'beliefstate': self.bs}
 
 
     def _add_bad_info(self, user_acts: List[UserAct]):
-        """ Let policy request again
+        """ 
+            If slot-specific BAD user action types exists, create a new entry
+            "bad" in beliefstate and add the slot to it.
         """
         if "bad" in self.bs:
             self.bs["bad"] = []
@@ -201,6 +206,16 @@ class TellerBST(HandcraftedBST):
 
 
     def _handle_user_acts(self, user_acts: List[UserAct]):
+        """
+            Updates the belief state based on the information contained in 
+            the user act(s). 
+            Simplified version from super()._handle_user_acts(), only process
+            Inform user act(s).
+
+            Args:
+                user_acts (list[UserAct]): the list of user acts to use to 
+                    update the belief state
+        """
         high_dict = self.bs["high_level_informs"]
         for act in user_acts:
             if act.type == UserActionType.Inform and \
@@ -212,6 +227,18 @@ class TellerBST(HandcraftedBST):
 
     
     def _handle_high_level_user_acts(self, act: UserAct, high_dict: dict):
+        """
+        Break down high-level Informs to low-level ones.
+        If the value is dontcare, then set low-level slot-value pair lists
+        to empty.
+
+        Args:
+            high_dict: use to store the high-level slot values and 
+                low-level results.
+                e.g., high-level slot "total_credits", value : "6"
+                      low-level slot {"credits":3, "credits": 6}
+                      high_dict["total_creidts"] = [6, [{"credits":3, "credits": 6}]]
+        """
         if act.value == "dontcare":
             high_dict[act.slot] = [act.value, []]
         else:
@@ -223,18 +250,10 @@ class TellerBST(HandcraftedBST):
                 high_dict[act.slot] = [act.value, new_slot_values]
 
     
-    def dialog_start(self):
-        """ The original comment says it returns the belief state
-        for a new dialog, we do nothing atm
-        """
-        self.logger.info("hey, bst starts working")
-        self.bs = BeliefState(self.domain)
-
-    
     @PublishSubscribe(sub_topics=["sys_state"])
     def _update_sys_act_info(self, sys_state):
-        self.logger.info(f"receive sys state, {sys_state}")
         if "last_act" in sys_state:
             sys_act = sys_state["last_act"]
+            # start a new converstation, clear the cached results
             if sys_act.type == SysActionType.RequestMore or sys_act.type == SysActionType.FailAndRestart:
                 self.bs = BeliefState(self.domain)

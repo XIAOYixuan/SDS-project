@@ -159,10 +159,17 @@ class HandcraftedNLG(Service):
 
 
 class TellerNLG(HandcraftedNLG):
+    """
+    A simple rule-based approach to generate human-readable sentences
+    for different system action type
+    """
 
     def __init__(self, domain: Domain, template_file: str = None, sub_topic_domains: Dict[str, str] = {},
                 logger = None, template_file_german= None,
                 language: Language = None):
+        """
+            Load the predefined template file 
+        """
         Service.__init__(self, domain=domain, sub_topic_domains=sub_topic_domains)
 
         template_file = os.path.join(
@@ -173,12 +180,16 @@ class TellerNLG(HandcraftedNLG):
 
     
     def generate_system_utterance(self, sys_act: SysAct = None) -> str:
+        """
+            If the system finds at least one solution, format the solutoin
+            using package tabular. Otherwise, use the templates defined 
+            in the template file.
+        """
         msg = None
         if sys_act.type == SysActionType.FinalSolution:
             msg = self._process_solusions(sys_act)
         else:
             try:
-                self.logger.info(f"sys act is {sys_act}")
                 msg = self.templates.create_message(sys_act)
             except BaseException as error:
                 self.logger.error(error)
@@ -195,18 +206,22 @@ class TellerNLG(HandcraftedNLG):
         return msg 
 
     def _process_solusions(self, sys_act: SysAct = None):
-        # need to change the sys act...
+        """
+            Create tables for each solution.
+        """
         solutions = sys_act.get_values('courses')
         ret = f"To get {sys_act.get_values('total_credits')[0]} credits, there are {len(solutions)} solution(s). \n"
 
         for sid, sol in enumerate(solutions):
             ret += f"Solution {sid}: \n"
-            ret += self._aggregate_on_day(sol)
+            ret += self._format_solutions_to_tables(sol)
         return ret
 
-    def _aggregate_on_day(self, solution):
-        # format: [Name, [date and time], Credit]
-        # TODO: make it state
+    def _format_solutions_to_tables(self, solution):
+        """
+            Sort the courses based on day and time, and create a table to 
+            present all the information using package tabulate
+        """
         from tabulate import tabulate
         table = []
         for course in solution:
