@@ -37,6 +37,9 @@ class SysActionType(Enum):
     Bad = 'bad'
     Bye = 'closingmsg'
     ConfirmRequest = 'confreq'
+    RequestWithErrorInfo = 'reqwerr'
+    FinalSolution = 'final_sol'
+    FailAndRestart = 'fail_restart'
 
 
 class SysAct(object):
